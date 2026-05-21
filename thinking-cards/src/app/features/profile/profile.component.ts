@@ -92,7 +92,7 @@ import { Card } from '../../core/models/card.model';
         Logout
       </button>
 
-      <p class="version">Thinking Cards v1.0</p>
+      <p class="version">Thinking.Cards v1.0</p>
     </div>
   `,
   styles: `

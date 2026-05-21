@@ -9,7 +9,7 @@ import { BrandLogoComponent } from './brand-logo.component';
     <header class="top-bar">
       <a routerLink="/" class="brand">
         <app-brand-logo class="brand-icon" />
-        <span class="brand-name">Thinking Cards</span>
+        <span class="brand-name">Thinking.Cards</span>
       </a>
     </header>
   `,
