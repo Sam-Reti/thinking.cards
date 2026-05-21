@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Categories: publicly readable, admin-only writes
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Cards: authenticated read, admin-only writes
+    match /cards/{cardId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Favorites: users can only read/write their own favorites
+    match /users/{userId}/favorites/{cardId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Progress: users can only read/write their own progress
+    match /users/{userId}/progress/{cardId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

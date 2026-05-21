@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap');
+
+:root {
+  --bg: #1a1a2e;
+  --bg-card: #16213e;
+  --bg-surface: #0f3460;
+  --text: #eaeaea;
+  --text-muted: #a0a0b0;
+  --accent: #e94560;
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  --socratic: #0098b3;
+  --thisorthat: #ed6d1e;
+  --mindbogglers: #03be63;
+  --moralcompass: #b30086;
+  --knowthyself: #e7c53b;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Poppins', sans-serif;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+button {
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input {
+  font-family: 'Inter', sans-serif;
+  outline: none;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}

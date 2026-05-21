@@ -1,0 +1,196 @@
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
+import { Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { CardService } from '../../core/services/card.service';
+import { FavoritesService } from '../../core/services/favorites.service';
+import { ProgressService } from '../../core/services/progress.service';
+import { QuestionCardComponent } from '../../shared/components/question-card.component';
+import { SwipeDirective } from '../../shared/directives/swipe.directive';
+import { Card } from '../../core/models/card.model';
+import { Category } from '../../core/models/category.model';
+
+@Component({
+  selector: 'app-shuffle',
+  imports: [QuestionCardComponent, SwipeDirective],
+  template: `
+    <div class="viewer container">
+      <button class="back-btn" (click)="goBack()">&larr; Back</button>
+      <h2 class="title">Shuffle Mode</h2>
+
+      @if (currentCard(); as card) {
+        <div class="category-badge" [style.background]="categoryColor()">
+          {{ categoryName() }}
+        </div>
+
+        <div class="card-stage" appSwipe
+             (swipeLeft)="shuffle()"
+             (swipeRight)="shuffle()"
+             [class.deal]="dealing()">
+          <app-question-card
+            [card]="card"
+            [color]="categoryColor()"
+            [favorited]="isFavorited()"
+            (toggleFavorite)="onToggleFavorite()"
+          />
+        </div>
+
+        <button class="shuffle-btn" (click)="shuffle()">
+          Shuffle
+        </button>
+      } @else {
+        <p class="loading">Loading cards...</p>
+      }
+    </div>
+  `,
+  styles: `
+    .viewer {
+      padding-top: 24px;
+      padding-bottom: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .back-btn {
+      align-self: flex-start;
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      padding: 4px 0;
+      &:hover { color: var(--text); }
+    }
+    .title {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .category-badge {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card-stage {
+      width: 100%;
+      max-width: 520px;
+    }
+    .card-stage.deal {
+      animation: dealCard 0.35s ease-out;
+    }
+    @keyframes dealCard {
+      0%   { transform: scale(0.9) rotate(-3deg); opacity: 0.3; }
+      50%  { transform: scale(1.02) rotate(1deg); opacity: 0.8; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .shuffle-btn {
+      margin-top: 32px;
+      background: var(--accent);
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 14px 48px;
+      border-radius: 50px;
+      transition: transform 0.15s, opacity 0.2s;
+      &:hover { opacity: 0.9; transform: scale(1.03); }
+      &:active { transform: scale(0.97); }
+    }
+    .loading {
+      color: var(--text-muted);
+      margin-top: 64px;
+    }
+  `,
+})
+export class ShuffleComponent {
+  private cardService = inject(CardService);
+  private favoritesService = inject(FavoritesService);
+  private progressService = inject(ProgressService);
+  private router = inject(Router);
+
+  private allCards = toSignal(this.cardService.getAllCards(), {
+    initialValue: [] as Card[],
+  });
+  private categories = toSignal(this.cardService.getCategories(), {
+    initialValue: [] as Category[],
+  });
+  private currentIndex = signal(0);
+  private shuffled = signal<Card[]>([]);
+  dealing = signal(false);
+
+  constructor() {
+    effect(() => {
+      const cards = this.allCards();
+      if (cards.length && !untracked(() => this.shuffled().length)) {
+        this.shuffled.set(this.fisherYates([...cards]));
+      }
+    });
+
+    effect(() => {
+      const card = this.currentCard();
+      if (card) this.progressService.markSeen(card.id);
+    });
+  }
+
+  currentCard = computed(() => {
+    const cards = this.shuffled();
+    const idx = this.currentIndex();
+    return cards.length ? cards[idx] : null;
+  });
+
+  categoryColor = computed(() => {
+    const card = this.currentCard();
+    if (!card) return '#e94560';
+    const cat = this.categories().find(c => c.id === card.categoryId);
+    return cat?.color ?? '#e94560';
+  });
+
+  categoryName = computed(() => {
+    const card = this.currentCard();
+    if (!card) return '';
+    const cat = this.categories().find(c => c.id === card.categoryId);
+    return cat?.name ?? '';
+  });
+
+  isFavorited = computed(() => {
+    const card = this.currentCard();
+    return card ? this.favoritesService.favoriteIds().has(card.id) : false;
+  });
+
+  shuffle() {
+    this.dealing.set(false);
+    requestAnimationFrame(() => {
+      const idx = this.currentIndex();
+      const cards = this.shuffled();
+      if (idx < cards.length - 1) {
+        this.currentIndex.set(idx + 1);
+      } else {
+        // Reshuffle when we've gone through all cards
+        this.shuffled.set(this.fisherYates([...this.allCards()]));
+        this.currentIndex.set(0);
+      }
+      this.dealing.set(true);
+    });
+  }
+
+  onToggleFavorite(): void {
+    const card = this.currentCard();
+    if (card) this.favoritesService.toggle(card.id);
+  }
+
+  goBack() {
+    this.router.navigate(['/']);
+  }
+
+  private fisherYates(arr: Card[]): Card[] {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+}
