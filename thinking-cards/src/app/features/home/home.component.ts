@@ -3,36 +3,16 @@ import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
-import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { CategoryCardComponent } from '../../shared/components/category-card.component';
-import { BrandLogoComponent } from '../../shared/components/brand-logo.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
 @Component({
   selector: 'app-home',
-  imports: [CategoryCardComponent, BrandLogoComponent],
+  imports: [CategoryCardComponent],
   template: `
     <div class="home container">
-      <header class="hero">
-        <app-brand-logo class="hero-logo" />
-        <h1>Thinking Cards</h1>
-        <p>50 thought-provoking questions across 5 categories. Pick a deck and start exploring.</p>
-      </header>
-      <div class="shuffle-wrap">
-        <button class="shuffle-btn" (click)="openShuffle()">Shuffle All Decks</button>
-      </div>
-
-      @if (hasFavorites()) {
-        <div class="grid" style="margin-bottom: 20px">
-          <app-category-card
-            [category]="favoritesTile"
-            (click)="openFavorites()"
-          />
-        </div>
-      }
-
       @if (error()) {
         <p class="error">{{ error() }}</p>
       }
@@ -69,42 +49,6 @@ import { Category } from '../../core/models/category.model';
       50%  { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-    .hero-logo {
-      width: 64px;
-      height: 64px;
-      color: #e94560;
-      margin: 0 auto 12px;
-    }
-    .hero {
-      text-align: center;
-      margin-bottom: 48px;
-      h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 8px;
-      }
-      p {
-        color: var(--text-muted);
-        font-size: 1.05rem;
-      }
-    }
-    .shuffle-wrap {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 40px;
-    }
-    .shuffle-btn {
-      background: var(--accent);
-      color: white;
-      font-family: 'Poppins', sans-serif;
-      font-size: 1.05rem;
-      font-weight: 700;
-      padding: 14px 40px;
-      border-radius: 50px;
-      transition: transform 0.15s, opacity 0.2s;
-      &:hover { opacity: 0.9; transform: scale(1.03); }
-      &:active { transform: scale(0.97); }
-    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -114,7 +58,6 @@ import { Category } from '../../core/models/category.model';
 })
 export class HomeComponent {
   private cardService = inject(CardService);
-  private favoritesService = inject(FavoritesService);
   private progressService = inject(ProgressService);
   private router = inject(Router);
 
@@ -127,17 +70,6 @@ export class HomeComponent {
   private progressMap = computed(() =>
     this.progressService.countByCategory(this.allCards())
   );
-
-  hasFavorites = computed(() => this.favoritesService.favoriteIds().size > 0);
-
-  readonly favoritesTile: Category = {
-    id: 'favorites',
-    name: 'Favorites',
-    icon: 'heart',
-    color: '#e94560',
-    description: 'Your saved cards',
-    order: -1,
-  };
 
   categories = toSignal(
     this.cardService.getCategories().pipe(
@@ -155,13 +87,5 @@ export class HomeComponent {
 
   openCategory(cat: Category) {
     this.router.navigate(['/category', cat.id]);
-  }
-
-  openFavorites() {
-    this.router.navigate(['/favorites']);
-  }
-
-  openShuffle() {
-    this.router.navigate(['/shuffle']);
   }
 }

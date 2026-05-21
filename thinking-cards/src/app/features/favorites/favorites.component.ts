@@ -1,5 +1,4 @@
 import { Component, inject, signal, computed, HostListener } from '@angular/core';
-import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
@@ -13,7 +12,6 @@ import { Category } from '../../core/models/category.model';
   imports: [QuestionCardComponent, SwipeDirective],
   template: `
     <div class="viewer container">
-      <button class="back-btn" (click)="goBack()">&larr; Back</button>
       <h2 class="title" style="color: #e94560">&#x2665; Favorites</h2>
 
       @if (favoriteCards().length) {
@@ -47,15 +45,6 @@ import { Category } from '../../core/models/category.model';
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    .back-btn {
-      align-self: flex-start;
-      background: none;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-      padding: 4px 0;
-      &:hover { color: var(--text); }
     }
     .title {
       font-size: 1.5rem;
@@ -115,7 +104,6 @@ import { Category } from '../../core/models/category.model';
   `,
 })
 export class FavoritesComponent {
-  private router = inject(Router);
   private cardService = inject(CardService);
   private favoritesService = inject(FavoritesService);
 
@@ -177,10 +165,6 @@ export class FavoritesComponent {
     if (this.currentIndex() >= cards.length - 1 && this.currentIndex() > 0) {
       this.currentIndex.set(this.currentIndex() - 1);
     }
-  }
-
-  goBack() {
-    this.router.navigate(['/']);
   }
 
   private triggerSlide(dir: 'left' | 'right') {

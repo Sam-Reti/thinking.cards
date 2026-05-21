@@ -1,5 +1,4 @@
 import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
-import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
@@ -14,7 +13,6 @@ import { Category } from '../../core/models/category.model';
   imports: [QuestionCardComponent, SwipeDirective],
   template: `
     <div class="viewer container">
-      <button class="back-btn" (click)="goBack()">&larr; Back</button>
       <h2 class="title">Shuffle Mode</h2>
 
       @if (currentCard(); as card) {
@@ -49,15 +47,6 @@ import { Category } from '../../core/models/category.model';
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    .back-btn {
-      align-self: flex-start;
-      background: none;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-      padding: 4px 0;
-      &:hover { color: var(--text); }
     }
     .title {
       font-size: 1.5rem;
@@ -110,7 +99,6 @@ export class ShuffleComponent {
   private cardService = inject(CardService);
   private favoritesService = inject(FavoritesService);
   private progressService = inject(ProgressService);
-  private router = inject(Router);
 
   private allCards = toSignal(this.cardService.getAllCards(), {
     initialValue: [] as Card[],
@@ -180,10 +168,6 @@ export class ShuffleComponent {
   onToggleFavorite(): void {
     const card = this.currentCard();
     if (card) this.favoritesService.toggle(card.id);
-  }
-
-  goBack() {
-    this.router.navigate(['/']);
   }
 
   private fisherYates(arr: Card[]): Card[] {

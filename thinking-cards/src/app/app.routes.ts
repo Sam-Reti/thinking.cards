@@ -51,6 +51,15 @@ export const routes: Routes = [
     data: { animation: 'category' },
   },
   {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/profile/profile.component').then(
+        (m) => m.ProfileComponent
+      ),
+    data: { animation: 'profile' },
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () =>
