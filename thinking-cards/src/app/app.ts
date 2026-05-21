@@ -4,6 +4,7 @@ import { filter } from 'rxjs';
 import { TopBarComponent } from './shared/components/top-bar.component';
 import { BottomBarComponent } from './shared/components/bottom-bar.component';
 import { AuthService } from './core/services/auth.service';
+import { ThemeService } from './core/services/theme.service';
 import { routeAnimation } from './shared/animations/route-animations';
 
 const HIDDEN_BAR_PATTERNS = ['/login', '/register', '/admin', '/category/'];
@@ -37,6 +38,7 @@ const HIDDEN_BAR_PATTERNS = ['/login', '/register', '/admin', '/category/'];
 export class App {
   private contexts = inject(ChildrenOutletContexts);
   private auth = inject(AuthService);
+  private _theme = inject(ThemeService);
   private router = inject(Router);
   private currentUrl = signal(this.router.url);
 

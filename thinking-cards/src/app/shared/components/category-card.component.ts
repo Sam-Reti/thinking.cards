@@ -40,12 +40,12 @@ import { CategoryIconComponent } from './category-icon.component';
       overflow: hidden;
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid var(--bar-border);
       transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 
       &:hover {
         transform: translateY(-4px);
-        border-color: rgba(255, 255, 255, 0.2);
+        border-color: var(--bar-border);
       }
     }
 
@@ -64,7 +64,7 @@ import { CategoryIconComponent } from './category-icon.component';
     .icon {
       width: 52px;
       height: 52px;
-      color: white;
+      color: var(--text);
       position: relative;
     }
 
@@ -72,13 +72,13 @@ import { CategoryIconComponent } from './category-icon.component';
       font-family: 'Poppins', sans-serif;
       font-size: 1.1rem;
       font-weight: 700;
-      color: white;
+      color: var(--text);
       position: relative;
     }
 
     .desc {
       font-size: 0.8rem;
-      color: rgba(255, 255, 255, 0.65);
+      color: var(--text-muted);
       position: relative;
     }
 
@@ -87,7 +87,7 @@ import { CategoryIconComponent } from './category-icon.component';
       bottom: 10px;
       right: 14px;
       font-size: 0.7rem;
-      color: rgba(255, 255, 255, 0.85);
+      color: var(--text);
       font-weight: 600;
     }
 
@@ -97,7 +97,7 @@ import { CategoryIconComponent } from './category-icon.component';
       left: 0;
       right: 0;
       height: 4px;
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--hover-overlay);
       border-radius: 0 0 20px 20px;
       overflow: hidden;
     }

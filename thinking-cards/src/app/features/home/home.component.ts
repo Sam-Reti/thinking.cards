@@ -40,7 +40,7 @@ import { Category } from '../../core/models/category.model';
       position: fixed;
       inset: 0;
       z-index: -1;
-      background: linear-gradient(135deg, #1a1a2e, #16213e, #1a1a3e, #0f3460);
+      background: linear-gradient(135deg, var(--bg), var(--bg-card), var(--bg), var(--bg-surface));
       background-size: 400% 400%;
       animation: gradientShift 18s ease infinite;
     }

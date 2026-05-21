@@ -22,10 +22,10 @@ import { BrandLogoComponent } from './brand-logo.component';
       z-index: 100;
       height: 52px;
       padding-top: env(safe-area-inset-top, 0px);
-      background: rgba(26, 26, 46, 0.9);
+      background: var(--bar-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid var(--bar-border);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -48,7 +48,7 @@ import { BrandLogoComponent } from './brand-logo.component';
       font-family: 'Poppins', sans-serif;
       font-size: 1.05rem;
       font-weight: 700;
-      color: #eaeaea;
+      color: var(--text);
     }
   `,
 })
