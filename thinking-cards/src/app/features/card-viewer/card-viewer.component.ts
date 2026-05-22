@@ -142,6 +142,7 @@ export class CardViewerComponent {
       const card = this.currentCard();
       if (card) this.progressService.markSeen(card.id);
     });
+
   }
 
   private categoryId = toSignal(
@@ -161,8 +162,11 @@ export class CardViewerComponent {
   cards = toSignal(
     this.route.paramMap.pipe(
       map(params => params.get('id')!),
-      tap(() => this.currentIndex.set(0)),
-      switchMap(id => this.cardService.getCardsByCategory(id))
+      switchMap(id => this.cardService.getCardsByCategory(id)),
+      tap(cards => {
+        const saved = this.loadIndex(this.categoryId()!);
+        this.currentIndex.set(Math.min(saved, cards.length - 1));
+      })
     ),
     { initialValue: [] as Card[] }
   );
@@ -189,6 +193,7 @@ export class CardViewerComponent {
     if (idx < this.cards().length - 1) {
       this.triggerSlide('left');
       this.currentIndex.set(idx + 1);
+      this.persistIndex(idx + 1);
     }
   }
 
@@ -197,6 +202,7 @@ export class CardViewerComponent {
     if (idx > 0) {
       this.triggerSlide('right');
       this.currentIndex.set(idx - 1);
+      this.persistIndex(idx - 1);
     }
   }
 
@@ -213,5 +219,14 @@ export class CardViewerComponent {
     this.slideDir.set('');
     // Force reflow to restart animation
     requestAnimationFrame(() => this.slideDir.set(dir));
+  }
+
+  private persistIndex(index: number): void {
+    const catId = this.categoryId();
+    if (catId) localStorage.setItem(`card-pos:${catId}`, String(index));
+  }
+
+  private loadIndex(categoryId: string): number {
+    return parseInt(localStorage.getItem(`card-pos:${categoryId}`) ?? '0', 10);
   }
 }
