@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../core/services/admin.service';
 import { Category } from '../../core/models/category.model';
@@ -9,15 +9,19 @@ import { Category } from '../../core/models/category.model';
   template: `
     <div class="form-card">
       <form (ngSubmit)="onSubmit()">
-        <select [(ngModel)]="categoryId" name="categoryId" required>
+        <select [(ngModel)]="categoryId" name="categoryId" required (ngModelChange)="onCategoryChange($event)">
           <option value="" disabled>Select category</option>
           @for (cat of categories(); track cat.id) {
             <option [value]="cat.id">{{ cat.name }}</option>
           }
         </select>
-        <input type="number" placeholder="Card Number (1-10)" [(ngModel)]="cardNumber" name="cardNumber" required />
+        <input type="number" placeholder="Card Number (1-10)" [(ngModel)]="cardNumber" name="cardNumber" required min="1" />
         <textarea placeholder="Question text" [(ngModel)]="questionText" name="questionText" rows="3" required></textarea>
+        <p class="hint">Line breaks = title + body | use • for bullets | Name: for quotes</p>
         <button type="submit" class="btn-save">Add Card</button>
+        @if (successMsg) {
+          <p class="success">{{ successMsg }}</p>
+        }
       </form>
     </div>
   `,
@@ -50,26 +54,46 @@ import { Category } from '../../core/models/category.model';
       border-radius: 8px;
       font-weight: 600;
     }
+    .hint {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin: -4px 0 0;
+      opacity: 0.7;
+    }
+    .success {
+      color: #00b894;
+      font-size: 0.85rem;
+      margin: 0;
+    }
   `
 })
 export class CardFormComponent {
   private adminService = inject(AdminService);
   categories = input.required<Category[]>();
+  cardCountMap = input<Record<string, number>>({});
 
   categoryId = '';
   cardNumber = 1;
   questionText = '';
+  successMsg = '';
+
+  onCategoryChange(categoryId: string) {
+    const count = this.cardCountMap()[categoryId] || 0;
+    this.cardNumber = count + 1;
+  }
 
   onSubmit() {
     this.adminService
       .addCard({
         categoryId: this.categoryId,
-        cardNumber: this.cardNumber,
+        cardNumber: Math.floor(Number(this.cardNumber)),
         questionText: this.questionText,
       })
       .subscribe(() => {
+        this.successMsg = `Card #${this.cardNumber} added!`;
         this.questionText = '';
         this.cardNumber++;
+        setTimeout(() => (this.successMsg = ''), 3000);
       });
   }
 }
