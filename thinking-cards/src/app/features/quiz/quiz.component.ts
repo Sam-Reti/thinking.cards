@@ -458,7 +458,7 @@ export class QuizComponent {
     this.score.set(0);
     this.totalAnswered.set(0);
     this.state.set('question');
-    this.clearProgress(this.categoryId()!);
+    this.persistProgress();
   }
 
   goBack() {
