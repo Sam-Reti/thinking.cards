@@ -20,7 +20,7 @@ import { Category } from '../../core/models/category.model';
         @for (cat of categories(); track cat.id) {
           <app-category-card
             [category]="cat"
-            [progress]="progressFor(cat.id)"
+            [progress]="progressFor(cat)"
             (click)="openCategory(cat)"
           />
         }
@@ -81,8 +81,26 @@ export class HomeComponent {
     { initialValue: [] as Category[] }
   );
 
-  progressFor(categoryId: string): number {
-    return this.progressMap().get(categoryId)?.percent ?? 0;
+  progressFor(cat: Category): number {
+    if (cat.type === 'quiz') {
+      return this.quizProgress(cat.id);
+    }
+    return this.progressMap().get(cat.id)?.percent ?? 0;
+  }
+
+  private quizProgress(categoryId: string): number {
+    const raw = localStorage.getItem(`quiz-pos:${categoryId}`);
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    if (data.completed) {
+      return Math.round((data.score / (data.totalCards || 1)) * 100);
+    }
+    const total = data.totalCards || this.cardCountFor(categoryId);
+    return total ? Math.round((data.index / total) * 100) : 0;
+  }
+
+  private cardCountFor(categoryId: string): number {
+    return this.allCards().filter(c => c.categoryId === categoryId).length;
   }
 
   openCategory(cat: Category) {

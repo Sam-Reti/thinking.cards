@@ -3,7 +3,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { switchMap, map, tap } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
-import { ProgressService } from '../../core/services/progress.service';
 import { StreakService } from '../../core/services/streak.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { Card } from '../../core/models/card.model';
@@ -353,7 +352,6 @@ export class QuizComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cardService = inject(CardService);
-  private progressService = inject(ProgressService);
   private streakService = inject(StreakService);
 
   currentIndex = signal(0);
@@ -428,11 +426,8 @@ export class QuizComponent {
     this.totalAnswered.update(v => v + 1);
 
     const card = this.currentCard();
-    if (card) {
-      if (index === card.correctIndex) {
-        this.score.update(v => v + 1);
-      }
-      this.progressService.markSeen(card.id);
+    if (card && index === card.correctIndex) {
+      this.score.update(v => v + 1);
     }
 
     this.streakService.recordActivity();
