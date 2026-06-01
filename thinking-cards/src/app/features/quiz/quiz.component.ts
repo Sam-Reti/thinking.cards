@@ -16,6 +16,12 @@ interface QuizProgress {
   totalCards?: number;
 }
 
+interface ShuffledCard {
+  card: Card;
+  options: string[];
+  correctIndex: number;
+}
+
 type QuizState = 'question' | 'answered' | 'complete';
 
 @Component({
@@ -44,13 +50,13 @@ type QuizState = 'question' | 'answered' | 'complete';
 
       @switch (state()) {
         @case ('question') {
-          @if (currentCard(); as card) {
+          @if (currentShuffled(); as sc) {
             <div class="quote-card" [style.border-color]="category()?.color ?? '#e94560'">
-              <span class="card-number">#{{ card.cardNumber }}</span>
-              <p class="quote">"{{ card.questionText }}"</p>
+              <span class="card-number">#{{ sc.card.cardNumber }}</span>
+              <p class="quote">"{{ sc.card.questionText }}"</p>
             </div>
             <div class="options">
-              @for (opt of card.options ?? []; track $index) {
+              @for (opt of sc.options; track $index) {
                 <button class="option-btn" (click)="selectAnswer($index)">
                   {{ opt }}
                 </button>
@@ -60,32 +66,32 @@ type QuizState = 'question' | 'answered' | 'complete';
         }
 
         @case ('answered') {
-          @if (currentCard(); as card) {
+          @if (currentShuffled(); as sc) {
             <div class="quote-card" [style.border-color]="category()?.color ?? '#e94560'">
-              <span class="card-number">#{{ card.cardNumber }}</span>
-              <p class="quote">"{{ card.questionText }}"</p>
+              <span class="card-number">#{{ sc.card.cardNumber }}</span>
+              <p class="quote">"{{ sc.card.questionText }}"</p>
             </div>
             <div class="options">
-              @for (opt of card.options ?? []; track $index) {
+              @for (opt of sc.options; track $index) {
                 <button
                   class="option-btn"
-                  [class.correct]="$index === card.correctIndex"
-                  [class.wrong]="$index === selectedIndex() && $index !== card.correctIndex"
+                  [class.correct]="$index === sc.correctIndex"
+                  [class.wrong]="$index === selectedIndex() && $index !== sc.correctIndex"
                   disabled
                 >
                   {{ opt }}
-                  @if ($index === card.correctIndex) {
+                  @if ($index === sc.correctIndex) {
                     <span class="check-icon">&#10003;</span>
                   }
-                  @if ($index === selectedIndex() && $index !== card.correctIndex) {
+                  @if ($index === selectedIndex() && $index !== sc.correctIndex) {
                     <span class="x-icon">&#10007;</span>
                   }
                 </button>
               }
             </div>
-            @if (card.explanation) {
+            @if (sc.card.explanation) {
               <div class="explanation" [style.border-color]="category()?.color ?? '#e94560'">
-                <p class="explanation-text">{{ card.explanation }}</p>
+                <p class="explanation-text">{{ sc.card.explanation }}</p>
               </div>
             }
             <button class="next-btn" (click)="nextQuestion()">
@@ -379,6 +385,7 @@ export class QuizComponent {
       map(params => params.get('id')!),
       switchMap(id => this.cardService.getCardsByCategory(id)),
       tap(cards => {
+        this.shuffledCards.set(cards.map(c => this.shuffleOptions(c)));
         const saved = this.loadProgress(this.categoryId()!);
         if (!saved) return;
         if (saved.completed) {
@@ -396,10 +403,12 @@ export class QuizComponent {
     { initialValue: [] as Card[] }
   );
 
-  currentCard = computed(() => {
-    const c = this.cards();
+  private shuffledCards = signal<ShuffledCard[]>([]);
+
+  currentShuffled = computed(() => {
+    const sc = this.shuffledCards();
     const i = this.currentIndex();
-    return c.length ? c[i] : null;
+    return sc.length ? sc[i] : null;
   });
 
   isLastQuestion = computed(() =>
@@ -425,8 +434,8 @@ export class QuizComponent {
     this.state.set('answered');
     this.totalAnswered.update(v => v + 1);
 
-    const card = this.currentCard();
-    if (card && index === card.correctIndex) {
+    const sc = this.currentShuffled();
+    if (sc && index === sc.correctIndex) {
       this.score.update(v => v + 1);
     }
 
@@ -448,6 +457,7 @@ export class QuizComponent {
   }
 
   playAgain() {
+    this.shuffledCards.set(this.cards().map(c => this.shuffleOptions(c)));
     this.currentIndex.set(0);
     this.selectedIndex.set(-1);
     this.score.set(0);
@@ -458,6 +468,20 @@ export class QuizComponent {
 
   goBack() {
     this.router.navigate(['/']);
+  }
+
+  private shuffleOptions(card: Card): ShuffledCard {
+    const options = [...(card.options ?? [])];
+    const correctAnswer = options[card.correctIndex ?? 0];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    return {
+      card,
+      options,
+      correctIndex: options.indexOf(correctAnswer),
+    };
   }
 
   private saveCompleted(): void {
