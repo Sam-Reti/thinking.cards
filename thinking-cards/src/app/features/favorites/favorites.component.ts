@@ -12,7 +12,7 @@ import { Category } from '../../core/models/category.model';
   imports: [QuestionCardComponent, SwipeDirective],
   template: `
     <div class="viewer container">
-      <h2 class="title" style="color: #e94560">&#x2665; Favorites</h2>
+      <h2 class="title" style="color: var(--accent)">&#x2665; Favorites</h2>
 
       @if (favoriteCards().length) {
         <div class="card-stage" appSwipe
@@ -23,6 +23,7 @@ import { Category } from '../../core/models/category.model';
           <app-question-card
             [card]="currentCard()!"
             [color]="currentCardColor()"
+            [categoryName]="currentCategoryName()"
             [favorited]="true"
             (toggleFavorite)="onToggleFavorite()"
           />
@@ -133,6 +134,13 @@ export class FavoritesComponent {
     if (!card) return '#e94560';
     const cat = this.categories().find((c) => c.id === card.categoryId);
     return cat?.color ?? '#e94560';
+  });
+
+  currentCategoryName = computed(() => {
+    const card = this.currentCard();
+    if (!card) return '';
+    const cat = this.categories().find((c) => c.id === card.categoryId);
+    return cat?.name ?? '';
   });
 
   @HostListener('window:keydown', ['$event'])

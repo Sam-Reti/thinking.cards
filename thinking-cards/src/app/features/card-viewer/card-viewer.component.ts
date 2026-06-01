@@ -5,6 +5,7 @@ import { switchMap, map, tap } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
+import { StreakService } from '../../core/services/streak.service';
 import { QuestionCardComponent } from '../../shared/components/question-card.component';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { SwipeDirective } from '../../shared/directives/swipe.directive';
@@ -33,6 +34,7 @@ import { Category } from '../../core/models/category.model';
           <app-question-card
             [card]="currentCard()!"
             [color]="category()?.color ?? '#e94560'"
+            [categoryName]="category()?.name ?? ''"
             [favorited]="isFavorited()"
             (toggleFavorite)="onToggleFavorite()"
           />
@@ -133,6 +135,7 @@ export class CardViewerComponent {
   private cardService = inject(CardService);
   private favoritesService = inject(FavoritesService);
   private progressService = inject(ProgressService);
+  private streakService = inject(StreakService);
 
   currentIndex = signal(0);
   slideDir = signal<'left' | 'right' | ''>('');
@@ -140,7 +143,9 @@ export class CardViewerComponent {
   constructor() {
     effect(() => {
       const card = this.currentCard();
-      if (card) this.progressService.markSeen(card.id);
+      if (!card) return;
+      this.progressService.markSeen(card.id);
+      this.streakService.recordActivity();
     });
 
   }

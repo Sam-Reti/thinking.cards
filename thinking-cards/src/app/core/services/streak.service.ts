@@ -1,5 +1,14 @@
-import { Injectable, inject, computed } from '@angular/core';
-import { ProgressService } from './progress.service';
+import { Injectable, inject, computed, signal, effect, NgZone } from '@angular/core';
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp,
+  Unsubscribe,
+} from 'firebase/firestore';
+import { AuthService } from './auth.service';
 
 export interface StreakInfo {
   current: number;
@@ -7,16 +16,16 @@ export interface StreakInfo {
   activeToday: boolean;
 }
 
-export function computeStreak(dates: Date[]): StreakInfo {
-  if (dates.length === 0) {
+export function computeStreak(dateKeys: string[]): StreakInfo {
+  if (dateKeys.length === 0) {
     return { current: 0, longest: 0, activeToday: false };
   }
 
-  const dayKeys = new Set(dates.map((d) => toDateKey(d)));
-  const sorted = [...dayKeys].sort();
+  const daySet = new Set(dateKeys);
+  const sorted = [...daySet].sort();
 
   const today = toDateKey(new Date());
-  const activeToday = dayKeys.has(today);
+  const activeToday = daySet.has(today);
 
   let longest = 1;
   let run = 1;
@@ -31,7 +40,7 @@ export function computeStreak(dates: Date[]): StreakInfo {
 
   let current = 0;
   let checkKey = activeToday ? today : yesterday(today);
-  while (dayKeys.has(checkKey)) {
+  while (daySet.has(checkKey)) {
     current++;
     checkKey = yesterday(checkKey);
   }
@@ -60,7 +69,45 @@ function isConsecutive(a: string, b: string): boolean {
 
 @Injectable({ providedIn: 'root' })
 export class StreakService {
-  private progress = inject(ProgressService);
+  private auth = inject(AuthService);
+  private zone = inject(NgZone);
+  private db = getFirestore();
+  private unsub: Unsubscribe | null = null;
+  private todayRecorded = false;
 
-  readonly streak = computed(() => computeStreak(this.progress.seenDates()));
+  readonly activityDates = signal<string[]>([]);
+  readonly streak = computed(() => computeStreak(this.activityDates()));
+
+  constructor() {
+    effect(() => {
+      const user = this.auth.currentUser();
+      this.cleanup();
+      this.todayRecorded = false;
+      if (!user) {
+        this.activityDates.set([]);
+        return;
+      }
+      const colRef = collection(this.db, `users/${user.uid}/activity`);
+      this.unsub = onSnapshot(colRef, (snapshot) => {
+        this.zone.run(() => {
+          this.activityDates.set(snapshot.docs.map((d) => d.id));
+        });
+      });
+    });
+  }
+
+  recordActivity(): void {
+    if (this.todayRecorded) return;
+    const user = this.auth.currentUser();
+    if (!user) return;
+    const today = toDateKey(new Date());
+    this.todayRecorded = true;
+    const ref = doc(this.db, `users/${user.uid}/activity`, today);
+    setDoc(ref, { lastActiveAt: serverTimestamp() }, { merge: true });
+  }
+
+  private cleanup(): void {
+    this.unsub?.();
+    this.unsub = null;
+  }
 }

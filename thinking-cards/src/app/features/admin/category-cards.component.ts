@@ -101,7 +101,7 @@ import { Card } from '../../core/models/card.model';
     }
     .del {
       background: rgba(233,69,96,0.15);
-      color: #e94560;
+      color: var(--accent);
       padding: 4px 10px;
       border-radius: 6px;
       font-size: 0.75rem;

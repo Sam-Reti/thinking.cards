@@ -3,4 +3,7 @@ export interface Card {
   questionText: string;
   categoryId: string;
   cardNumber: number;
+  options?: string[];
+  correctIndex?: number;
+  explanation?: string;
 }

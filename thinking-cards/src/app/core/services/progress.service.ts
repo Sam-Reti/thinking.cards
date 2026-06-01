@@ -6,7 +6,6 @@ import {
   setDoc,
   onSnapshot,
   serverTimestamp,
-  Timestamp,
   Unsubscribe,
 } from 'firebase/firestore';
 import { AuthService } from './auth.service';
@@ -26,7 +25,6 @@ export class ProgressService {
   private unsub: Unsubscribe | null = null;
 
   readonly seenIds = signal<Set<string>>(new Set());
-  readonly seenDates = signal<Date[]>([]);
 
   constructor() {
     effect(() => {
@@ -34,21 +32,12 @@ export class ProgressService {
       this.cleanup();
       if (!user) {
         this.seenIds.set(new Set());
-        this.seenDates.set([]);
         return;
       }
       const colRef = collection(this.db, `users/${user.uid}/progress`);
       this.unsub = onSnapshot(colRef, (snapshot) => {
         this.zone.run(() => {
           this.seenIds.set(new Set(snapshot.docs.map((d) => d.id)));
-          const dates: Date[] = [];
-          for (const d of snapshot.docs) {
-            const seenAt = d.data()['seenAt'];
-            if (seenAt instanceof Timestamp) {
-              dates.push(seenAt.toDate());
-            }
-          }
-          this.seenDates.set(dates);
         });
       });
     });

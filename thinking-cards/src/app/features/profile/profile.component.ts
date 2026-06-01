@@ -6,7 +6,7 @@ import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { StreakService } from '../../core/services/streak.service';
-import { ThemeService } from '../../core/services/theme.service';
+import { ThemeService, DARK_THEMES, LIGHT_THEMES } from '../../core/services/theme.service';
 import { Card } from '../../core/models/card.model';
 
 @Component({
@@ -56,23 +56,47 @@ import { Card } from '../../core/models/card.model';
         </div>
       </div>
 
-      <button class="action-btn theme-btn" (click)="themeService.toggle()">
-        @if (themeService.theme() === 'dark') {
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          Light Mode
-        } @else {
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-          Dark Mode
+      <div class="theme-section">
+        <span class="theme-heading">Dark</span>
+        @for (t of darkThemes; track t.name) {
+          <button
+            class="theme-option"
+            [class.active]="themeService.theme() === t.name"
+            (click)="themeService.setTheme(t.name)"
+          >
+            <span class="theme-colors">
+              <span class="color-dot" [style.background]="t.bg"></span>
+              <span class="color-dot" [style.background]="t.accent"></span>
+            </span>
+            <span class="theme-label">{{ t.label }}</span>
+            @if (themeService.theme() === t.name) {
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            }
+          </button>
         }
-      </button>
+
+        <span class="theme-heading light-heading">Light</span>
+        @for (t of lightThemes; track t.name) {
+          <button
+            class="theme-option"
+            [class.active]="themeService.theme() === t.name"
+            (click)="themeService.setTheme(t.name)"
+          >
+            <span class="theme-colors">
+              <span class="color-dot light-dot" [style.background]="t.bg"></span>
+              <span class="color-dot" [style.background]="t.accent"></span>
+            </span>
+            <span class="theme-label">{{ t.label }}</span>
+            @if (themeService.theme() === t.name) {
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            }
+          </button>
+        }
+      </div>
 
       @if (auth.isAdmin()) {
         <button class="action-btn admin-btn" (click)="goAdmin()">
@@ -213,7 +237,7 @@ import { Card } from '../../core/models/card.model';
 
     .progress-pct {
       font-weight: 600;
-      color: #e94560;
+      color: var(--accent);
     }
 
     .progress-track {
@@ -226,7 +250,7 @@ import { Card } from '../../core/models/card.model';
     .progress-fill {
       height: 100%;
       border-radius: 4px;
-      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      background: var(--accent);
       transition: width 0.4s ease;
     }
 
@@ -251,11 +275,72 @@ import { Card } from '../../core/models/card.model';
       height: 20px;
     }
 
-    .theme-btn {
+    .theme-section {
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .theme-heading {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .light-heading {
+      margin-top: 10px;
+    }
+
+    .theme-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
       background: var(--hover-overlay);
       color: var(--text);
+      transition: background 0.15s;
 
-      &:hover { opacity: 0.85; }
+      &:hover { background: var(--bg-surface); }
+
+      &.active {
+        background: var(--bg-surface);
+        outline: 2px solid var(--accent);
+      }
+    }
+
+    .theme-colors {
+      display: flex;
+      gap: 4px;
+    }
+
+    .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    .light-dot {
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+    }
+
+    .theme-label {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-align: left;
+    }
+
+    .check-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
     }
 
     .admin-btn {
@@ -267,7 +352,7 @@ import { Card } from '../../core/models/card.model';
 
     .logout-btn {
       background: rgba(233, 69, 96, 0.12);
-      color: #e94560;
+      color: var(--accent);
 
       &:hover { background: rgba(233, 69, 96, 0.2); }
     }
@@ -292,7 +377,9 @@ export class ProfileComponent {
     initialValue: [] as Card[],
   });
 
-  readonly avatarBg = '#e94560';
+  readonly darkThemes = DARK_THEMES;
+  readonly lightThemes = LIGHT_THEMES;
+  readonly avatarBg = 'var(--accent)';
 
   avatarLetter = computed(() => {
     const email = this.auth.currentUser()?.email;

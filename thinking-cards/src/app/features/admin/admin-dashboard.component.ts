@@ -133,7 +133,7 @@ import { AppUser } from '../../core/models/app-user.model';
     }
     .del {
       background: rgba(233,69,96,0.15);
-      color: #e94560;
+      color: var(--accent);
       padding: 6px 12px;
       border-radius: 6px;
       font-size: 0.8rem;

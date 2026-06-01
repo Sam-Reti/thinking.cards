@@ -8,6 +8,7 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { label: 'Daily', route: '/daily' },
   { label: 'Categories', route: '/' },
   { label: 'Favorites', route: '/favorites' },
   { label: 'Shuffle', route: '/shuffle' },
@@ -27,6 +28,12 @@ const TABS: Tab[] = [
         >
           <span class="tab-icon">
             @switch (tab.route) {
+              @case ('/daily') {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              }
               @case ('/') {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -91,7 +98,7 @@ const TABS: Tab[] = [
       position: relative;
 
       &.active {
-        color: #e94560;
+        color: var(--accent);
       }
     }
 
@@ -119,7 +126,7 @@ const TABS: Tab[] = [
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: #e94560;
+      background: var(--accent);
       position: absolute;
       bottom: 4px;
     }

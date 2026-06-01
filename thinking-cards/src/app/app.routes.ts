@@ -25,6 +25,15 @@ export const routes: Routes = [
     data: { animation: 'register' },
   },
   {
+    path: 'daily',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/daily/daily-card.component').then(
+        (m) => m.DailyCardComponent
+      ),
+    data: { animation: 'daily' },
+  },
+  {
     path: 'shuffle',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -50,6 +59,15 @@ export const routes: Routes = [
         (m) => m.CardViewerComponent
       ),
     data: { animation: 'category' },
+  },
+  {
+    path: 'quiz/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/quiz/quiz.component').then(
+        (m) => m.QuizComponent
+      ),
+    data: { animation: 'quiz' },
   },
   {
     path: 'profile',

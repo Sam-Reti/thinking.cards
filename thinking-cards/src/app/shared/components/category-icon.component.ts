@@ -1,5 +1,13 @@
 import { Component, computed, input } from '@angular/core';
 
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 @Component({
   selector: 'app-category-icon',
   template: `
@@ -45,6 +53,13 @@ import { Component, computed, input } from '@angular/core';
           <circle cx="24" cy="24" r="3" fill="currentColor"/>
         }
 
+        @case ('who-said-it') {
+          <!-- Speech bubble with question mark -->
+          <path d="M 10 10 C 10 7, 38 7, 38 10 L 38 26 C 38 29, 22 29, 20 29 L 14 36 L 16 29 C 12 29, 10 29, 10 26 Z"
+                stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+          <text x="24" y="23" text-anchor="middle" font-size="16" font-weight="bold" fill="currentColor" font-family="Poppins, sans-serif">?</text>
+        }
+
         @case ('favorites') {
           <!-- Heart icon -->
           <path d="M24 39.7l-2.1-1.9C12.3 29.2 6 23.5 6 16.5 6 10.7 10.7 6 16.5 6c3.2 0 6.3 1.5 8.3 3.9L24 9l-.8-.9C25.2 7.5 28.3 6 31.5 6 37.3 6 42 10.7 42 16.5c0 7-6.3 12.7-15.9 21.3L24 39.7z"
@@ -52,8 +67,48 @@ import { Component, computed, input } from '@angular/core';
         }
 
         @default {
-          <circle cx="24" cy="24" r="16" stroke="currentColor" stroke-width="2.5" fill="none"/>
-          <circle cx="24" cy="24" r="3" fill="currentColor"/>
+          @switch (generatedShape()) {
+            @case (0) {
+              <!-- Star burst — 6 radiating lines -->
+              <line x1="32" y1="24" x2="41" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="28" y1="31" x2="32.5" y2="38.7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="20" y1="31" x2="15.5" y2="38.7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="16" y1="24" x2="7" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="20" y1="17" x2="15.5" y2="9.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="28" y1="17" x2="32.5" y2="9.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="24" cy="24" r="5" fill="currentColor" opacity="0.6"/>
+            }
+            @case (1) {
+              <!-- Diamond -->
+              <polygon points="24,6 42,24 24,42 6,24" stroke="currentColor" stroke-width="2.5" fill="none"/>
+              <polygon points="24,15 33,24 24,33 15,24" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+              <circle cx="24" cy="24" r="2.5" fill="currentColor"/>
+            }
+            @case (2) {
+              <!-- Hexagon -->
+              <polygon points="24,6 41,15 41,33 24,42 7,33 7,15" stroke="currentColor" stroke-width="2.5" fill="none"/>
+              <polygon points="24,14 34,19.5 34,28.5 24,34 14,28.5 14,19.5" stroke="currentColor" stroke-width="2" fill="none" opacity="0.4"/>
+              <circle cx="24" cy="24" r="3" fill="currentColor"/>
+            }
+            @case (3) {
+              <!-- Nested triangles -->
+              <polygon points="24,6 42,40 6,40" stroke="currentColor" stroke-width="2.5" fill="none"/>
+              <polygon points="24,18 34,38 14,38" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+              <circle cx="24" cy="32" r="2.5" fill="currentColor"/>
+            }
+            @case (4) {
+              <!-- Wave lines -->
+              <path d="M6,16 Q15,10 24,16 T42,16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M6,24 Q15,18 24,24 T42,24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+              <path d="M6,32 Q15,26 24,32 T42,32" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.35"/>
+            }
+            @case (5) {
+              <!-- Cross / plus -->
+              <line x1="24" y1="6" x2="24" y2="42" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <line x1="6" y1="24" x2="42" y2="24" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="24" cy="24" r="5" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+            }
+          }
         }
       }
     </svg>
@@ -69,4 +124,6 @@ export class CategoryIconComponent {
   key = computed(() =>
     this.name().toLowerCase().replace(/\s+/g, '-')
   );
+
+  generatedShape = computed(() => hashCode(this.name()) % 6);
 }

@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
+import { StreakService } from '../../core/services/streak.service';
 import { QuestionCardComponent } from '../../shared/components/question-card.component';
 import { SwipeDirective } from '../../shared/directives/swipe.directive';
 import { Card } from '../../core/models/card.model';
@@ -100,6 +101,7 @@ export class ShuffleComponent {
   private cardService = inject(CardService);
   private favoritesService = inject(FavoritesService);
   private progressService = inject(ProgressService);
+  private streakService = inject(StreakService);
 
   private allCards = toSignal(this.cardService.getAllCards(), {
     initialValue: [] as Card[],
@@ -107,13 +109,20 @@ export class ShuffleComponent {
   private categories = toSignal(this.cardService.getCategories(), {
     initialValue: [] as Category[],
   });
+  private standardCards = computed(() => {
+    const quizCatIds = new Set(
+      this.categories().filter((c) => c.type === 'quiz').map((c) => c.id)
+    );
+    return this.allCards().filter((card) => !quizCatIds.has(card.categoryId));
+  });
+
   private currentIndex = signal(0);
   private shuffled = signal<Card[]>([]);
   dealing = signal(false);
 
   constructor() {
     effect(() => {
-      const cards = this.allCards();
+      const cards = this.standardCards();
       if (!cards.length) return;
 
       const existing = untracked(() => this.shuffled());
@@ -136,7 +145,10 @@ export class ShuffleComponent {
 
     effect(() => {
       const card = this.currentCard();
-      if (card) this.progressService.markSeen(card.id);
+      if (card) {
+        this.progressService.markSeen(card.id);
+        this.streakService.recordActivity();
+      }
     });
   }
 
@@ -174,7 +186,7 @@ export class ShuffleComponent {
         this.currentIndex.set(idx + 1);
       } else {
         // Reshuffle when we've gone through all cards
-        this.shuffled.set(this.fisherYates([...this.allCards()]));
+        this.shuffled.set(this.fisherYates([...this.standardCards()]));
         this.currentIndex.set(0);
       }
       this.dealing.set(true);

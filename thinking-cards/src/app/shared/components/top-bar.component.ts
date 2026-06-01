@@ -41,7 +41,7 @@ import { BrandLogoComponent } from './brand-logo.component';
     .brand-icon {
       width: 24px;
       height: 24px;
-      color: #e94560;
+      color: var(--accent);
     }
 
     .brand-name {

@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap');
 
-:root {
+:root,
+:root[data-theme="midnight"] {
   --bg: #1a1a2e;
   --bg-card: #16213e;
   --bg-surface: #0f3460;
@@ -20,14 +21,67 @@
   --knowthyself: #e7c53b;
 }
 
-:root[data-theme="light"] {
+:root[data-theme="daylight"] {
   --bg: #f5f5f7;
   --bg-card: #ffffff;
   --bg-surface: #e8ecf1;
   --text: #1a1a2e;
   --text-muted: #6b6b80;
+  --accent: #e94560;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   --bar-bg: rgba(245, 245, 247, 0.9);
+  --bar-border: rgba(0, 0, 0, 0.08);
+  --hover-overlay: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="ocean"] {
+  --bg: #0a1628;
+  --bg-card: #0d2137;
+  --bg-surface: #133a5c;
+  --text: #e0f0ff;
+  --text-muted: #7eb8da;
+  --accent: #00b4d8;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --bar-bg: rgba(10, 22, 40, 0.9);
+  --bar-border: rgba(255, 255, 255, 0.06);
+  --hover-overlay: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="sunset"] {
+  --bg: #1a1008;
+  --bg-card: #2a1a0e;
+  --bg-surface: #3d2814;
+  --text: #fce4c8;
+  --text-muted: #c4a882;
+  --accent: #ff8c42;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --bar-bg: rgba(26, 16, 8, 0.9);
+  --bar-border: rgba(255, 255, 255, 0.06);
+  --hover-overlay: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="forest"] {
+  --bg: #0a1a0f;
+  --bg-card: #0f2418;
+  --bg-surface: #163822;
+  --text: #d8f0dd;
+  --text-muted: #7db88a;
+  --accent: #2ec46a;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --bar-bg: rgba(10, 26, 15, 0.9);
+  --bar-border: rgba(255, 255, 255, 0.06);
+  --hover-overlay: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="lavender"] {
+  --bg: #f3eef8;
+  --bg-card: #ffffff;
+  --bg-surface: #e8dff0;
+  --text: #2d2640;
+  --text-muted: #7a7290;
+  --accent: #8b5cf6;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --bar-bg: rgba(243, 238, 248, 0.9);
   --bar-border: rgba(0, 0, 0, 0.08);
   --hover-overlay: rgba(0, 0, 0, 0.06);
 }

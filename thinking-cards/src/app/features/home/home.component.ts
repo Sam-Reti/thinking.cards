@@ -86,6 +86,7 @@ export class HomeComponent {
   }
 
   openCategory(cat: Category) {
-    this.router.navigate(['/category', cat.id]);
+    const route = cat.type === 'quiz' ? '/quiz' : '/category';
+    this.router.navigate([route, cat.id]);
   }
 }

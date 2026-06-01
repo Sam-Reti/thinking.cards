@@ -28,33 +28,29 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if isAdmin()
-        && hasAll(['name', 'description', 'icon', 'color', 'order'])
-        && hasOnly(['name', 'description', 'icon', 'color', 'order'])
+        && hasAll(['name', 'description', 'color', 'order'])
+        && hasOnly(['name', 'description', 'color', 'order', 'type'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 100
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 500
-        && request.resource.data.icon is string
-        && request.resource.data.icon.size() > 0
-        && request.resource.data.icon.size() <= 50
         && request.resource.data.color is string
         && request.resource.data.color.matches('^#[0-9A-Fa-f]{6}$')
-        && request.resource.data.order is int;
+        && request.resource.data.order is int
+        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz']);
 
       allow update: if isAdmin()
-        && hasOnly(['name', 'description', 'icon', 'color', 'order'])
+        && hasOnly(['name', 'description', 'color', 'order', 'type'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 100
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 500
-        && request.resource.data.icon is string
-        && request.resource.data.icon.size() > 0
-        && request.resource.data.icon.size() <= 50
         && request.resource.data.color is string
         && request.resource.data.color.matches('^#[0-9A-Fa-f]{6}$')
-        && request.resource.data.order is int;
+        && request.resource.data.order is int
+        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz']);
 
       allow delete: if isAdmin();
     }
@@ -65,26 +61,50 @@ service cloud.firestore {
 
       allow create: if isAdmin()
         && hasAll(['questionText', 'categoryId', 'cardNumber'])
-        && hasOnly(['questionText', 'categoryId', 'cardNumber'])
+        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation'])
         && request.resource.data.questionText is string
         && request.resource.data.questionText.size() > 0
         && request.resource.data.questionText.size() <= 2000
         && request.resource.data.categoryId is string
         && request.resource.data.categoryId.size() > 0
         && request.resource.data.cardNumber is int
-        && request.resource.data.cardNumber > 0;
+        && request.resource.data.cardNumber > 0
+        && (!('options' in request.resource.data) || request.resource.data.options is list)
+        && (!('correctIndex' in request.resource.data) || request.resource.data.correctIndex is int)
+        && (!('explanation' in request.resource.data) || request.resource.data.explanation is string);
 
       allow update: if isAdmin()
-        && hasOnly(['questionText', 'categoryId', 'cardNumber'])
+        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation'])
         && request.resource.data.questionText is string
         && request.resource.data.questionText.size() > 0
         && request.resource.data.questionText.size() <= 2000
         && request.resource.data.categoryId is string
         && request.resource.data.categoryId.size() > 0
         && request.resource.data.cardNumber is int
-        && request.resource.data.cardNumber > 0;
+        && request.resource.data.cardNumber > 0
+        && (!('options' in request.resource.data) || request.resource.data.options is list)
+        && (!('correctIndex' in request.resource.data) || request.resource.data.correctIndex is int)
+        && (!('explanation' in request.resource.data) || request.resource.data.explanation is string);
 
       allow delete: if isAdmin();
+    }
+
+    // ── Users ────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && hasAll(['email', 'createdAt'])
+        && hasOnly(['email', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.createdAt is string;
+
+      allow update: if isOwner(userId)
+        && hasOnly(['email', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.createdAt is string;
+
+      allow delete: if false;
     }
 
     // ── Favorites ─────────────────────────────────────────────────────
@@ -97,6 +117,22 @@ service cloud.firestore {
         && request.resource.data.addedAt is timestamp;
 
       allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    // ── Activity (streak tracking) ─────────────────────────────────────
+    match /users/{userId}/activity/{dateKey} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && hasAll(['lastActiveAt'])
+        && hasOnly(['lastActiveAt'])
+        && request.resource.data.lastActiveAt is timestamp;
+
+      allow update: if isOwner(userId)
+        && hasOnly(['lastActiveAt'])
+        && request.resource.data.lastActiveAt is timestamp;
+
       allow delete: if isOwner(userId);
     }
 

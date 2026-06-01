@@ -91,7 +91,7 @@ import { parseCardBlocks } from '../utils/card-parser';
       transition: color 0.2s, transform 0.2s;
       svg { width: 22px; height: 22px; }
       &:hover { transform: scale(1.15); }
-      &.favorited { color: #e94560; }
+      &.favorited { color: var(--accent); }
     }
     .card-number {
       font-family: 'Poppins', sans-serif;

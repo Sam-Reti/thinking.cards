@@ -15,6 +15,11 @@ const HIDDEN_BAR_PATTERNS = ['/login', '/register', '/admin', '/category/'];
   imports: [RouterOutlet, TopBarComponent, BottomBarComponent],
   animations: [routeAnimation],
   template: `
+    @if (updateAvailable()) {
+      <button class="update-banner" (click)="applyUpdate()">
+        A new version is available — tap to update
+      </button>
+    }
     @if (showBottomBar()) {
       <app-top-bar />
     }
@@ -34,6 +39,25 @@ const HIDDEN_BAR_PATTERNS = ['/login', '/register', '/admin', '/category/'];
       padding-top: 52px;
       padding-bottom: 80px;
     }
+    .update-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+      transition: opacity 0.2s;
+      &:hover { opacity: 0.9; }
+    }
   `
 })
 export class App {
@@ -45,6 +69,8 @@ export class App {
 
   private swUpdate = inject(SwUpdate);
 
+  updateAvailable = signal(false);
+
   constructor() {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -53,8 +79,12 @@ export class App {
     if (this.swUpdate.isEnabled) {
       this.swUpdate.versionUpdates
         .pipe(filter((e) => e.type === 'VERSION_READY'))
-        .subscribe(() => document.location.reload());
+        .subscribe(() => this.updateAvailable.set(true));
     }
+  }
+
+  applyUpdate(): void {
+    document.location.reload();
   }
 
   showBottomBar = computed(() => {

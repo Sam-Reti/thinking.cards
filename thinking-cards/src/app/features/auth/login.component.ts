@@ -71,7 +71,7 @@ import { AuthService } from '../../core/services/auth.service';
       margin-bottom: 24px;
     }
     .error {
-      color: #e94560;
+      color: var(--accent);
       background: rgba(233,69,96,0.1);
       padding: 10px;
       border-radius: 8px;
