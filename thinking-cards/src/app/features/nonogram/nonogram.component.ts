@@ -274,7 +274,7 @@ import { Category } from '../../core/models/category.model';
       &:hover { background: rgba(255, 255, 255, 0.06); }
     }
     .nono-cell.cell-filled {
-      background: var(--accent);
+      background: var(--text);
     }
     .nono-cell.cell-filled.cell-solved {
       background: #00b894;
