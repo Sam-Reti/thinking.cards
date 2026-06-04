@@ -141,11 +141,12 @@ export class DailyCardComponent {
   streak = this.streakService.streak;
 
   private standardCards = computed(() => {
-    const cats = this.categories();
-    const quizCatIds = new Set(
-      cats.filter((c) => c.type === 'quiz').map((c) => c.id)
+    const excludedIds = new Set(
+      this.categories()
+        .filter((c) => c.type === 'quiz' || c.type === 'matrix')
+        .map((c) => c.id)
     );
-    return this.allCards().filter((card) => !quizCatIds.has(card.categoryId));
+    return this.allCards().filter((card) => !excludedIds.has(card.categoryId));
   });
 
   dailyCard = computed(() => {

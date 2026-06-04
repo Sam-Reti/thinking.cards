@@ -110,10 +110,12 @@ export class ShuffleComponent {
     initialValue: [] as Category[],
   });
   private standardCards = computed(() => {
-    const quizCatIds = new Set(
-      this.categories().filter((c) => c.type === 'quiz').map((c) => c.id)
+    const excludedIds = new Set(
+      this.categories()
+        .filter((c) => c.type === 'quiz' || c.type === 'matrix')
+        .map((c) => c.id)
     );
-    return this.allCards().filter((card) => !quizCatIds.has(card.categoryId));
+    return this.allCards().filter((card) => !excludedIds.has(card.categoryId));
   });
 
   private currentIndex = signal(0);

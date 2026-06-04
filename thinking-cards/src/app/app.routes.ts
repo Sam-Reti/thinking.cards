@@ -52,6 +52,24 @@ export const routes: Routes = [
     data: { animation: 'favorites' },
   },
   {
+    path: 'quizzes',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/quizzes/quizzes.component').then(
+        (m) => m.QuizzesComponent
+      ),
+    data: { animation: 'quizzes' },
+  },
+  {
+    path: 'puzzles',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/puzzles/puzzles.component').then(
+        (m) => m.PuzzlesComponent
+      ),
+    data: { animation: 'puzzles' },
+  },
+  {
     path: 'category/:id',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -68,6 +86,15 @@ export const routes: Routes = [
         (m) => m.QuizComponent
       ),
     data: { animation: 'quiz' },
+  },
+  {
+    path: 'matrix/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/matrix/matrix.component').then(
+        (m) => m.MatrixComponent
+      ),
+    data: { animation: 'matrix' },
   },
   {
     path: 'badges',

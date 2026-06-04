@@ -118,9 +118,16 @@ export class FavoritesComponent {
     initialValue: [] as Category[],
   });
 
+  private excludedCategoryIds = computed(() => new Set(
+    this.categories()
+      .filter((c) => c.type === 'quiz' || c.type === 'matrix')
+      .map((c) => c.id)
+  ));
+
   favoriteCards = computed(() => {
     const ids = this.favoritesService.favoriteIds();
-    return this.allCards().filter((c) => ids.has(c.id));
+    const excluded = this.excludedCategoryIds();
+    return this.allCards().filter((c) => ids.has(c.id) && !excluded.has(c.categoryId));
   });
 
   currentCard = computed(() => {
