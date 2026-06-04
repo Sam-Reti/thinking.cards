@@ -246,14 +246,14 @@ import { Category } from '../../core/models/category.model';
       align-items: center;
       justify-content: flex-end;
       padding: 2px 1px 4px;
-      gap: 1px;
+      gap: 3px;
     }
     .row-clue-cell {
       display: flex;
       align-items: center;
       justify-content: flex-end;
       padding: 1px 6px 1px 2px;
-      gap: 3px;
+      gap: 6px;
     }
     .clue-num {
       font-family: 'Poppins', sans-serif;
