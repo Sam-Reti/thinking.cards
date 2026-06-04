@@ -1,20 +1,13 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { switchMap, map, tap } from 'rxjs';
+import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { StreakService } from '../../core/services/streak.service';
+import { UserStateService, QuizProgress } from '../../core/services/user-state.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
-
-interface QuizProgress {
-  index: number;
-  score: number;
-  totalAnswered: number;
-  completed?: boolean;
-  totalCards?: number;
-}
 
 interface ShuffledCard {
   card: Card;
@@ -359,6 +352,7 @@ export class QuizComponent {
   private router = inject(Router);
   private cardService = inject(CardService);
   private streakService = inject(StreakService);
+  private userState = inject(UserStateService);
 
   currentIndex = signal(0);
   state = signal<QuizState>('question');
@@ -384,21 +378,25 @@ export class QuizComponent {
     this.route.paramMap.pipe(
       map(params => params.get('id')!),
       switchMap(id => this.cardService.getCardsByCategory(id)),
-      tap(cards => {
+      switchMap(cards => {
         this.shuffledCards.set(cards.map(c => this.shuffleOptions(c)));
-        const saved = this.loadProgress(this.categoryId()!);
-        if (!saved) return;
-        if (saved.completed) {
-          this.score.set(saved.score);
-          this.totalAnswered.set(saved.totalCards ?? cards.length);
-          this.currentIndex.set(cards.length - 1);
-          this.state.set('complete');
-        } else if (saved.index < cards.length) {
-          this.currentIndex.set(saved.index);
-          this.score.set(saved.score);
-          this.totalAnswered.set(saved.totalAnswered);
-        }
-      })
+        return from(this.userState.loadQuizProgress(this.categoryId()!)).pipe(
+          tap(saved => {
+            if (!saved) return;
+            if (saved.completed) {
+              this.score.set(saved.score);
+              this.totalAnswered.set(saved.totalCards ?? cards.length);
+              this.currentIndex.set(cards.length - 1);
+              this.state.set('complete');
+            } else if (saved.index < cards.length) {
+              this.currentIndex.set(saved.index);
+              this.score.set(saved.score);
+              this.totalAnswered.set(saved.totalAnswered);
+            }
+          }),
+          map(() => cards),
+        );
+      }),
     ),
     { initialValue: [] as Card[] }
   );
@@ -487,34 +485,22 @@ export class QuizComponent {
   private saveCompleted(): void {
     const catId = this.categoryId();
     if (!catId) return;
-    const data: QuizProgress = {
+    this.userState.saveQuizProgress(catId, {
       index: this.currentIndex(),
       score: this.score(),
       totalAnswered: this.totalAnswered(),
       completed: true,
       totalCards: this.cards().length,
-    };
-    localStorage.setItem(`quiz-pos:${catId}`, JSON.stringify(data));
+    });
   }
 
   private persistProgress(): void {
     const catId = this.categoryId();
     if (!catId) return;
-    const data: QuizProgress = {
+    this.userState.saveQuizProgress(catId, {
       index: this.currentIndex(),
       score: this.score(),
       totalAnswered: this.totalAnswered(),
-    };
-    localStorage.setItem(`quiz-pos:${catId}`, JSON.stringify(data));
-  }
-
-  private loadProgress(categoryId: string): QuizProgress | null {
-    const raw = localStorage.getItem(`quiz-pos:${categoryId}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  }
-
-  private clearProgress(categoryId: string): void {
-    localStorage.removeItem(`quiz-pos:${categoryId}`);
+    });
   }
 }

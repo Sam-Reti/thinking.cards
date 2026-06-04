@@ -1,11 +1,12 @@
 import { Component, inject, signal, computed, effect, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { switchMap, map, tap } from 'rxjs';
+import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { StreakService } from '../../core/services/streak.service';
+import { UserStateService } from '../../core/services/user-state.service';
 import { QuestionCardComponent } from '../../shared/components/question-card.component';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { SwipeDirective } from '../../shared/directives/swipe.directive';
@@ -136,6 +137,7 @@ export class CardViewerComponent {
   private favoritesService = inject(FavoritesService);
   private progressService = inject(ProgressService);
   private streakService = inject(StreakService);
+  private userState = inject(UserStateService);
 
   currentIndex = signal(0);
   slideDir = signal<'left' | 'right' | ''>('');
@@ -168,10 +170,12 @@ export class CardViewerComponent {
     this.route.paramMap.pipe(
       map(params => params.get('id')!),
       switchMap(id => this.cardService.getCardsByCategory(id)),
-      tap(cards => {
-        const saved = this.loadIndex(this.categoryId()!);
-        this.currentIndex.set(Math.min(saved, cards.length - 1));
-      })
+      switchMap(cards =>
+        from(this.userState.loadCardPosition(this.categoryId()!)).pipe(
+          tap(saved => this.currentIndex.set(Math.min(saved, cards.length - 1))),
+          map(() => cards),
+        )
+      ),
     ),
     { initialValue: [] as Card[] }
   );
@@ -198,7 +202,7 @@ export class CardViewerComponent {
     if (idx < this.cards().length - 1) {
       this.triggerSlide('left');
       this.currentIndex.set(idx + 1);
-      this.persistIndex(idx + 1);
+      this.userState.saveCardPosition(this.categoryId()!, idx + 1);
     }
   }
 
@@ -207,7 +211,7 @@ export class CardViewerComponent {
     if (idx > 0) {
       this.triggerSlide('right');
       this.currentIndex.set(idx - 1);
-      this.persistIndex(idx - 1);
+      this.userState.saveCardPosition(this.categoryId()!, idx - 1);
     }
   }
 
@@ -226,12 +230,4 @@ export class CardViewerComponent {
     requestAnimationFrame(() => this.slideDir.set(dir));
   }
 
-  private persistIndex(index: number): void {
-    const catId = this.categoryId();
-    if (catId) localStorage.setItem(`card-pos:${catId}`, String(index));
-  }
-
-  private loadIndex(categoryId: string): number {
-    return parseInt(localStorage.getItem(`card-pos:${categoryId}`) ?? '0', 10);
-  }
 }

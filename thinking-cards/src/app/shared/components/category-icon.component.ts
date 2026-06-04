@@ -60,6 +60,22 @@ function hashCode(str: string): number {
           <text x="24" y="23" text-anchor="middle" font-size="16" font-weight="bold" fill="currentColor" font-family="Poppins, sans-serif">?</text>
         }
 
+        @case ('logic-matrix') {
+          <!-- 3x3 grid pattern -->
+          <rect x="8" y="8" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="19" y="8" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="30" y="8" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="8" y="19" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="19" y="19" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+          <rect x="30" y="19" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="8" y="30" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="19" y="30" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="30" y="30" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <line x1="11" y1="11" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <line x1="15" y1="11" x2="11" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <path d="M33 23 L35 25.5 L38 21" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        }
+
         @case ('favorites') {
           <!-- Heart icon -->
           <path d="M24 39.7l-2.1-1.9C12.3 29.2 6 23.5 6 16.5 6 10.7 10.7 6 16.5 6c3.2 0 6.3 1.5 8.3 3.9L24 9l-.8-.9C25.2 7.5 28.3 6 31.5 6 37.3 6 42 10.7 42 16.5c0 7-6.3 12.7-15.9 21.3L24 39.7z"

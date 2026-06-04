@@ -1,17 +1,12 @@
 import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { switchMap, map, tap } from 'rxjs';
+import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
+import { UserStateService } from '../../core/services/user-state.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
-
-interface MatrixProgress {
-  index: number;
-  gridStates: Record<number, Record<string, number>>;
-  solvedPuzzles: number[];
-}
 
 interface GridSection {
   rowGroup: string;
@@ -38,7 +33,12 @@ interface GridSection {
       }
 
       @if (currentCard(); as card) {
-        <div class="puzzle-title">#{{ card.cardNumber }} — {{ card.questionText }}</div>
+        <div class="puzzle-title">
+          <span>#{{ card.cardNumber }} — {{ card.questionText }}</span>
+          @if (card.difficulty) {
+            <span class="difficulty-pill" [attr.data-difficulty]="card.difficulty">{{ card.difficulty }}</span>
+          }
+        </div>
 
         @if (card.matrixScenario) {
           <div class="scenario-strip">{{ card.matrixScenario }}</div>
@@ -215,6 +215,36 @@ interface GridSection {
       font-weight: 600;
       text-align: center;
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .difficulty-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .difficulty-pill[data-difficulty="Easy"] {
+      background: rgba(0, 184, 148, 0.18);
+      color: #00b894;
+    }
+    .difficulty-pill[data-difficulty="Medium"] {
+      background: rgba(253, 203, 110, 0.2);
+      color: #fdcb6e;
+    }
+    .difficulty-pill[data-difficulty="Hard"] {
+      background: rgba(225, 112, 85, 0.2);
+      color: #e17055;
+    }
+    .difficulty-pill[data-difficulty="Extreme"] {
+      background: rgba(162, 94, 255, 0.2);
+      color: #a25eff;
     }
     .scenario-strip {
       background: var(--bg-card);
@@ -440,6 +470,7 @@ export class MatrixComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cardService = inject(CardService);
+  private userState = inject(UserStateService);
 
   currentIndex = signal(0);
   gridState = signal<Record<string, number>>({});
@@ -451,6 +482,7 @@ export class MatrixComponent implements OnDestroy {
 
   private timerRef: ReturnType<typeof setInterval> | null = null;
   private solvedPuzzles = signal<number[]>([]);
+  private allGridStates: Record<number, Record<string, number>> = {};
 
   private categoryId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')!))
@@ -470,19 +502,24 @@ export class MatrixComponent implements OnDestroy {
     this.route.paramMap.pipe(
       map(params => params.get('id')!),
       switchMap(id => this.cardService.getCardsByCategory(id)),
-      tap(cards => {
-        const saved = this.loadProgress(this.categoryId()!);
-        if (saved) {
-          this.currentIndex.set(Math.min(saved.index, cards.length - 1));
-          this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
-          const gs = saved.gridStates?.[this.currentIndex()] ?? {};
-          this.gridState.set(gs);
-          if (this.solvedPuzzles().includes(this.currentIndex())) {
-            this.solved.set(true);
-          }
-        }
-        this.startTimer();
-      })
+      switchMap(cards =>
+        from(this.userState.loadMatrixProgress(this.categoryId()!)).pipe(
+          tap(saved => {
+            if (saved) {
+              this.currentIndex.set(Math.min(saved.index, cards.length - 1));
+              this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
+              this.allGridStates = saved.gridStates ?? {};
+              const gs = this.allGridStates[this.currentIndex()] ?? {};
+              this.gridState.set(gs);
+              if (this.solvedPuzzles().includes(this.currentIndex())) {
+                this.solved.set(true);
+              }
+            }
+            this.startTimer();
+          }),
+          map(() => cards),
+        )
+      ),
     ),
     { initialValue: [] as Card[] }
   );
@@ -720,9 +757,8 @@ export class MatrixComponent implements OnDestroy {
   }
 
   private loadCurrentPuzzle(): void {
-    const saved = this.loadProgress(this.categoryId()!);
     const idx = this.currentIndex();
-    const gs = saved?.gridStates?.[idx] ?? {};
+    const gs = this.allGridStates[idx] ?? {};
     this.gridState.set(gs);
     this.solved.set(this.solvedPuzzles().includes(idx));
     this.clueStruck.set({});
@@ -736,21 +772,11 @@ export class MatrixComponent implements OnDestroy {
   private persistProgress(): void {
     const catId = this.categoryId();
     if (!catId) return;
-    const saved = this.loadProgress(catId);
-    const gridStates = saved?.gridStates ?? {};
-    gridStates[this.currentIndex()] = this.gridState();
-
-    const data: MatrixProgress = {
+    this.allGridStates[this.currentIndex()] = this.gridState();
+    this.userState.saveMatrixProgress(catId, {
       index: this.currentIndex(),
-      gridStates,
+      gridStates: this.allGridStates,
       solvedPuzzles: this.solvedPuzzles(),
-    };
-    localStorage.setItem(`matrix-pos:${catId}`, JSON.stringify(data));
-  }
-
-  private loadProgress(categoryId: string): MatrixProgress | null {
-    const raw = localStorage.getItem(`matrix-pos:${categoryId}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    });
   }
 }

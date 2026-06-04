@@ -18,7 +18,7 @@ import { Card } from '../../core/models/card.model';
         </select>
         <input type="number" placeholder="Card Number (1-10)" [(ngModel)]="cardNumber" name="cardNumber" required min="1" />
         <textarea placeholder="Question text" [(ngModel)]="questionText" name="questionText" rows="3" required></textarea>
-        @if (!isQuiz()) {
+        @if (!isQuiz() && !isMatrix()) {
           <p class="hint">Line breaks = title + body | use • for bullets | Name: for quotes</p>
         }
         @if (isQuiz()) {
@@ -36,6 +36,22 @@ import { Card } from '../../core/models/card.model';
               </select>
             </div>
             <textarea placeholder="Explanation (shown after answering)" [(ngModel)]="explanation" name="explanation" rows="3"></textarea>
+          </div>
+        }
+        @if (isMatrix()) {
+          <div class="quiz-fields">
+            <p class="quiz-label">Matrix Puzzle Fields</p>
+            <textarea placeholder="Scenario description" [(ngModel)]="matrixScenario" name="matrixScenario" rows="2"></textarea>
+            @for (g of matrixGroupNames; track $index) {
+              <div class="quiz-fields" style="gap: 6px">
+                <input [placeholder]="'Group ' + ($index + 1) + ' name'" [(ngModel)]="matrixGroupNames[$index]" [name]="'gname' + $index" />
+                <input [placeholder]="'Items (comma-separated)'" [(ngModel)]="matrixGroupItems[$index]" [name]="'gitems' + $index" />
+                <input [placeholder]="'Grid labels (comma-separated)'" [(ngModel)]="matrixGroupLabels[$index]" [name]="'glabels' + $index" />
+              </div>
+            }
+            <textarea placeholder="Clues (one per line)" [(ngModel)]="matrixCluesText" name="matrixClues" rows="5"></textarea>
+            <textarea placeholder="Solution JSON: {&quot;Item1&quot;: {&quot;g1&quot;: &quot;val&quot;, &quot;g2&quot;: &quot;val&quot;}, ...}" [(ngModel)]="matrixSolutionText" name="matrixSolution" rows="4"></textarea>
+            <textarea placeholder="Explanation steps (one per line)" [(ngModel)]="matrixExplanationText" name="matrixExplanation" rows="4"></textarea>
           </div>
         }
         <button type="submit" class="btn-save">Add Card</button>
@@ -127,10 +143,24 @@ export class CardFormComponent {
   correctIndex = 0;
   explanation = '';
 
+  matrixScenario = '';
+  matrixGroupNames = ['', '', ''];
+  matrixGroupItems = ['', '', ''];
+  matrixGroupLabels = ['', '', ''];
+  matrixCluesText = '';
+  matrixSolutionText = '';
+  matrixExplanationText = '';
+
   isQuiz = computed(() => {
     const cats = this.categories();
     const selected = cats.find(c => c.id === this.categoryId);
     return selected?.type === 'quiz';
+  });
+
+  isMatrix = computed(() => {
+    const cats = this.categories();
+    const selected = cats.find(c => c.id === this.categoryId);
+    return selected?.type === 'matrix';
   });
 
   onCategoryChange(categoryId: string) {
@@ -151,6 +181,18 @@ export class CardFormComponent {
       card.explanation = this.explanation;
     }
 
+    if (this.isMatrix()) {
+      card.matrixScenario = this.matrixScenario;
+      card.matrixGroups = this.matrixGroupNames.map((name, i) => ({
+        name,
+        items: this.matrixGroupItems[i].split(',').map(s => s.trim()),
+        labels: this.matrixGroupLabels[i].split(',').map(s => s.trim()),
+      }));
+      card.matrixClues = this.matrixCluesText.split('\n').filter(l => l.trim());
+      card.matrixExplanation = this.matrixExplanationText.split('\n').filter(l => l.trim());
+      try { card.matrixSolution = JSON.parse(this.matrixSolutionText); } catch {}
+    }
+
     this.adminService.addCard(card).subscribe(() => {
       this.successMsg = `Card #${this.cardNumber} added!`;
       this.questionText = '';
@@ -158,6 +200,13 @@ export class CardFormComponent {
       this.options = ['', '', '', ''];
       this.correctIndex = 0;
       this.explanation = '';
+      this.matrixScenario = '';
+      this.matrixGroupNames = ['', '', ''];
+      this.matrixGroupItems = ['', '', ''];
+      this.matrixGroupLabels = ['', '', ''];
+      this.matrixCluesText = '';
+      this.matrixSolutionText = '';
+      this.matrixExplanationText = '';
       setTimeout(() => (this.successMsg = ''), 3000);
     });
   }

@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
+import { UserStateService } from '../../core/services/user-state.service';
 import { CategoryCardComponent } from '../../shared/components/category-card.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
@@ -58,6 +59,7 @@ import { Category } from '../../core/models/category.model';
 export class QuizzesComponent {
   private cardService = inject(CardService);
   private router = inject(Router);
+  private userState = inject(UserStateService);
 
   error = signal('');
 
@@ -80,9 +82,8 @@ export class QuizzesComponent {
   );
 
   progressFor(cat: Category): number {
-    const raw = localStorage.getItem(`quiz-pos:${cat.id}`);
-    if (!raw) return 0;
-    const data = JSON.parse(raw);
+    const data = this.userState.allQuizProgress().get(cat.id);
+    if (!data) return 0;
     if (data.completed) {
       return Math.round((data.score / (data.totalCards || 1)) * 100);
     }

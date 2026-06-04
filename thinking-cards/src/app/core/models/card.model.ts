@@ -1,3 +1,9 @@
+export interface MatrixGroup {
+  name: string;
+  items: string[];
+  labels: string[];
+}
+
 export interface Card {
   id: string;
   questionText: string;
@@ -6,4 +12,10 @@ export interface Card {
   options?: string[];
   correctIndex?: number;
   explanation?: string;
+  matrixGroups?: MatrixGroup[];
+  matrixClues?: string[];
+  matrixSolution?: Record<string, Record<string, string>>;
+  matrixScenario?: string;
+  matrixExplanation?: string[];
+  difficulty?: 'Easy' | 'Medium' | 'Hard' | 'Extreme';
 }

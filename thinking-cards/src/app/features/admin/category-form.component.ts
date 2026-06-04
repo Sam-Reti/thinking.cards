@@ -28,6 +28,7 @@ function randomPaletteColor(): string {
           <div class="type-toggle">
             <button type="button" class="type-btn" [class.active]="type === 'standard'" (click)="type = 'standard'">Standard</button>
             <button type="button" class="type-btn" [class.active]="type === 'quiz'" (click)="type = 'quiz'">Quiz</button>
+            <button type="button" class="type-btn" [class.active]="type === 'matrix'" (click)="type = 'matrix'">Matrix</button>
           </div>
         </div>
         <div class="color-row">
@@ -149,7 +150,7 @@ export class CategoryFormComponent {
   description = '';
   color = randomPaletteColor();
   order = 1;
-  type: 'standard' | 'quiz' = 'standard';
+  type: 'standard' | 'quiz' | 'matrix' = 'standard';
   successMsg = '';
 
   onSubmit() {
@@ -158,7 +159,7 @@ export class CategoryFormComponent {
       description: this.description,
       color: this.color,
       order: this.order,
-      ...(this.type === 'quiz' ? { type: 'quiz' as const } : {}),
+      ...(this.type !== 'standard' ? { type: this.type } : {}),
     };
     this.adminService
       .addCategory(payload)
