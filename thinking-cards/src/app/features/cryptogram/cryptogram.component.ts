@@ -254,7 +254,7 @@ import { Category } from '../../core/models/category.model';
       border-radius: 4px;
       transition: background 0.15s;
       -webkit-tap-highlight-color: transparent;
-      &:hover { background: rgba(255, 255, 255, 0.06); }
+      &:hover { background: var(--hover-overlay); }
     }
     .cipher-cell.selected {
       background: rgba(108, 92, 231, 0.25);
@@ -277,7 +277,7 @@ import { Category } from '../../core/models/category.model';
       font-weight: 700;
       color: var(--text);
       min-height: 1.4em;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 2px solid var(--grid-border);
       width: 100%;
       text-align: center;
       line-height: 1.4;
