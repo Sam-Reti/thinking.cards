@@ -32,6 +32,7 @@ export interface CryptogramProgress {
   guessStates: Record<number, Record<string, string>>;
   solvedPuzzles: number[];
   gaveUpPuzzles?: number[];
+  bestTimes?: Record<number, number>;
 }
 
 export interface NonogramProgress {
@@ -39,6 +40,7 @@ export interface NonogramProgress {
   gridStates: Record<number, Record<string, number>>;
   solvedPuzzles: number[];
   gaveUpPuzzles?: number[];
+  bestTimes?: Record<number, number>;
 }
 
 @Injectable({ providedIn: 'root' })

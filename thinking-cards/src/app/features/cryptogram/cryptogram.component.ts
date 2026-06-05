@@ -36,6 +36,10 @@ import { Category } from '../../core/models/category.model';
               <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
+          <span class="timer">{{ formattedTime() }}</span>
+          @if (bestTimeForCurrent()) {
+            <span class="best-time">{{ bestTimeForCurrent() }}</span>
+          }
         </div>
       }
 
@@ -139,6 +143,7 @@ import { Category } from '../../core/models/category.model';
           [gaveUpPuzzles]="gaveUpPuzzles()"
           [startedPuzzles]="startedPuzzles()"
           [currentIndex]="currentIndex()"
+          [completionTimes]="bestTimes"
           (selectPuzzle)="jumpToPuzzle($event)"
           (close)="showStats.set(false)"
         />
@@ -187,6 +192,21 @@ import { Category } from '../../core/models/category.model';
       transition: background 0.2s, color 0.2s;
       svg { width: 18px; height: 18px; }
       &:hover { background: var(--accent); color: white; }
+    }
+    .timer {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .best-time {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      opacity: 0.6;
+      font-variant-numeric: tabular-nums;
     }
     .instructions-panel {
       width: 100%;
@@ -472,9 +492,12 @@ export class CryptogramComponent implements OnDestroy {
   returnIndex = signal<number | null>(null);
 
   showStats = signal(false);
+  elapsedSeconds = signal(0);
   solvedPuzzles = signal<number[]>([]);
   gaveUpPuzzles = signal<number[]>([]);
+  private timerRef: ReturnType<typeof setInterval> | null = null;
   private allGuessStates: Record<number, Record<string, string>> = {};
+  bestTimes: Record<number, number> = {};
 
   private categoryId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')!))
@@ -502,12 +525,14 @@ export class CryptogramComponent implements OnDestroy {
                 this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
                 this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
                 this.allGuessStates = saved.guessStates ?? {};
+                this.bestTimes = saved.bestTimes ?? {};
                 const gs = this.allGuessStates[this.currentIndex()] ?? {};
                 this.guesses.set(gs);
                 if (this.solvedPuzzles().includes(this.currentIndex())) {
                   this.solved.set(true);
                 }
               }
+              this.startTimer();
             }),
             map(() => cards),
           )
@@ -524,6 +549,21 @@ export class CryptogramComponent implements OnDestroy {
   });
 
   isInstructionCard = computed(() => !this.currentCard()?.cryptogramPlaintext);
+
+  formattedTime = computed(() => {
+    const s = this.elapsedSeconds();
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  });
+
+  bestTimeForCurrent = computed(() => {
+    const secs = this.bestTimes[this.currentIndex()];
+    if (!secs) return '';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `Best: ${m}:${s.toString().padStart(2, '0')}`;
+  });
 
   isVigenere = computed(() => this.currentCard()?.difficulty === 'Extreme');
 
@@ -609,6 +649,7 @@ export class CryptogramComponent implements OnDestroy {
   });
 
   ngOnDestroy() {
+    this.stopTimer();
     this.persistProgress();
   }
 
@@ -700,6 +741,7 @@ export class CryptogramComponent implements OnDestroy {
     this.guesses.set(allGuesses);
     this.selectedCipher.set(null);
     this.solved.set(true);
+    this.stopTimer();
 
     const idx = this.currentIndex();
     if (!this.gaveUpPuzzles().includes(idx)) {
@@ -713,11 +755,13 @@ export class CryptogramComponent implements OnDestroy {
     this.solved.set(false);
     this.selectedCipher.set(null);
     this.hintsUsed.set(0);
+    this.elapsedSeconds.set(0);
 
     const idx = this.currentIndex();
     this.solvedPuzzles.update(sp => sp.filter(i => i !== idx));
     this.gaveUpPuzzles.update(gp => gp.filter(i => i !== idx));
     this.persistProgress();
+    this.startTimer();
   }
 
   prevPuzzle(): void {
@@ -742,6 +786,7 @@ export class CryptogramComponent implements OnDestroy {
     if (this.currentIndex() === 0) return;
     this.returnIndex.set(this.currentIndex());
     this.saveCurrent();
+    this.stopTimer();
     this.currentIndex.set(0);
     this.loadCurrentPuzzle();
   }
@@ -811,11 +856,21 @@ export class CryptogramComponent implements OnDestroy {
     }
 
     this.solved.set(true);
+    this.stopTimer();
     this.selectedCipher.set(null);
     const idx = this.currentIndex();
-    if (!this.solvedPuzzles().includes(idx)) {
+    const isFirstSolve = !this.solvedPuzzles().includes(idx);
+    if (isFirstSolve) {
       this.solvedPuzzles.update(sp => [...sp, idx]);
       this.celebration.trigger();
+    }
+
+    const elapsed = this.elapsedSeconds();
+    if (elapsed > 0) {
+      const prev = this.bestTimes[idx];
+      if (prev === undefined || elapsed < prev) {
+        this.bestTimes[idx] = elapsed;
+      }
     }
     this.persistProgress();
   }
@@ -831,7 +886,26 @@ export class CryptogramComponent implements OnDestroy {
     this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
     this.selectedCipher.set(null);
     this.hintsUsed.set(0);
+    this.elapsedSeconds.set(0);
+    if (this.isInstructionCard()) this.stopTimer();
+    else if (!this.solved()) this.startTimer();
+    else this.stopTimer();
     this.persistProgress();
+  }
+
+  private startTimer(): void {
+    this.stopTimer();
+    if (this.solved()) return;
+    this.timerRef = setInterval(() => {
+      this.elapsedSeconds.update(s => s + 1);
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerRef) {
+      clearInterval(this.timerRef);
+      this.timerRef = null;
+    }
   }
 
   private persistProgress(): void {
@@ -843,6 +917,7 @@ export class CryptogramComponent implements OnDestroy {
       guessStates: this.allGuessStates,
       solvedPuzzles: this.solvedPuzzles(),
       gaveUpPuzzles: this.gaveUpPuzzles(),
+      bestTimes: this.bestTimes,
     });
   }
 }

@@ -36,6 +36,10 @@ import { Category } from '../../core/models/category.model';
               <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
+          <span class="timer">{{ formattedTime() }}</span>
+          @if (bestTimeForCurrent()) {
+            <span class="best-time">{{ bestTimeForCurrent() }}</span>
+          }
         </div>
       }
 
@@ -130,6 +134,7 @@ import { Category } from '../../core/models/category.model';
           [gaveUpPuzzles]="gaveUpPuzzles()"
           [startedPuzzles]="startedPuzzles()"
           [currentIndex]="currentIndex()"
+          [completionTimes]="bestTimes"
           (selectPuzzle)="jumpToPuzzle($event)"
           (close)="showStats.set(false)"
         />
@@ -178,6 +183,22 @@ import { Category } from '../../core/models/category.model';
       transition: background 0.2s, color 0.2s;
       svg { width: 18px; height: 18px; }
       &:hover { background: var(--accent); color: white; }
+    }
+
+    .timer {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .best-time {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      opacity: 0.6;
+      font-variant-numeric: tabular-nums;
     }
 
     /* Instructions */
@@ -406,11 +427,14 @@ export class NonogramComponent implements OnDestroy {
   gridState = signal<Record<string, number>>({});
   solved = signal(false);
   returnIndex = signal<number | null>(null);
+  elapsedSeconds = signal(0);
 
   showStats = signal(false);
   solvedPuzzles = signal<number[]>([]);
   gaveUpPuzzles = signal<number[]>([]);
+  private timerRef: ReturnType<typeof setInterval> | null = null;
   private allGridStates: Record<number, Record<string, number>> = {};
+  bestTimes: Record<number, number> = {};
 
   private categoryId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')!))
@@ -438,12 +462,14 @@ export class NonogramComponent implements OnDestroy {
                 this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
                 this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
                 this.allGridStates = saved.gridStates ?? {};
+                this.bestTimes = saved.bestTimes ?? {};
                 const gs = this.allGridStates[this.currentIndex()] ?? {};
                 this.gridState.set(gs);
                 if (this.solvedPuzzles().includes(this.currentIndex())) {
                   this.solved.set(true);
                 }
               }
+              this.startTimer();
             }),
             map(() => cards),
           )
@@ -460,6 +486,21 @@ export class NonogramComponent implements OnDestroy {
   });
 
   isInstructionCard = computed(() => !this.currentCard()?.nonogramSolution?.length);
+
+  formattedTime = computed(() => {
+    const s = this.elapsedSeconds();
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  });
+
+  bestTimeForCurrent = computed(() => {
+    const secs = this.bestTimes[this.currentIndex()];
+    if (!secs) return '';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `Best: ${m}:${s.toString().padStart(2, '0')}`;
+  });
 
   private solution = computed(() => {
     const card = this.currentCard();
@@ -502,6 +543,7 @@ export class NonogramComponent implements OnDestroy {
   });
 
   ngOnDestroy() {
+    this.stopTimer();
     this.persistProgress();
   }
 
@@ -522,6 +564,7 @@ export class NonogramComponent implements OnDestroy {
     if (this.currentIndex() === 0) return;
     this.returnIndex.set(this.currentIndex());
     this.saveCurrent();
+    this.stopTimer();
     this.currentIndex.set(0);
     this.loadCurrentPuzzle();
   }
@@ -560,6 +603,7 @@ export class NonogramComponent implements OnDestroy {
     }
     this.gridState.set(newState);
     this.solved.set(true);
+    this.stopTimer();
 
     const idx = this.currentIndex();
     if (!this.gaveUpPuzzles().includes(idx)) {
@@ -571,10 +615,12 @@ export class NonogramComponent implements OnDestroy {
   resetPuzzle(): void {
     this.gridState.set({});
     this.solved.set(false);
+    this.elapsedSeconds.set(0);
     const idx = this.currentIndex();
     this.solvedPuzzles.update(sp => sp.filter(i => i !== idx));
     this.gaveUpPuzzles.update(gp => gp.filter(i => i !== idx));
     this.persistProgress();
+    this.startTimer();
   }
 
   prevPuzzle(): void {
@@ -612,10 +658,20 @@ export class NonogramComponent implements OnDestroy {
 
   private markSolved(): void {
     this.solved.set(true);
+    this.stopTimer();
     const idx = this.currentIndex();
-    if (!this.solvedPuzzles().includes(idx)) {
+    const isFirstSolve = !this.solvedPuzzles().includes(idx);
+    if (isFirstSolve) {
       this.solvedPuzzles.update(sp => [...sp, idx]);
       this.celebration.trigger();
+    }
+
+    const elapsed = this.elapsedSeconds();
+    if (elapsed > 0) {
+      const prev = this.bestTimes[idx];
+      if (prev === undefined || elapsed < prev) {
+        this.bestTimes[idx] = elapsed;
+      }
     }
     this.persistProgress();
   }
@@ -629,7 +685,26 @@ export class NonogramComponent implements OnDestroy {
     const gs = this.allGridStates[idx] ?? {};
     this.gridState.set(gs);
     this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
+    this.elapsedSeconds.set(0);
+    if (this.isInstructionCard()) this.stopTimer();
+    else if (!this.solved()) this.startTimer();
+    else this.stopTimer();
     this.persistProgress();
+  }
+
+  private startTimer(): void {
+    this.stopTimer();
+    if (this.solved()) return;
+    this.timerRef = setInterval(() => {
+      this.elapsedSeconds.update(s => s + 1);
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerRef) {
+      clearInterval(this.timerRef);
+      this.timerRef = null;
+    }
   }
 
   private persistProgress(): void {
@@ -641,6 +716,7 @@ export class NonogramComponent implements OnDestroy {
       gridStates: this.allGridStates,
       solvedPuzzles: this.solvedPuzzles(),
       gaveUpPuzzles: this.gaveUpPuzzles(),
+      bestTimes: this.bestTimes,
     });
   }
 }
