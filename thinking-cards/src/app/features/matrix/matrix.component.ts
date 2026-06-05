@@ -4,7 +4,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { UserStateService } from '../../core/services/user-state.service';
+import { CelebrationService } from '../../core/services/celebration.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
+import { PuzzleStatsComponent } from '../../shared/components/puzzle-stats.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
@@ -19,7 +21,7 @@ interface GridSection {
 
 @Component({
   selector: 'app-matrix',
-  imports: [CategoryIconComponent],
+  imports: [CategoryIconComponent, PuzzleStatsComponent],
   template: `
     <div class="matrix container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
@@ -35,7 +37,18 @@ interface GridSection {
               <line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
           </button>
+          <button class="info-btn" (click)="showStats.set(true)" title="Puzzle progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
           <span class="timer">{{ formattedTime() }}</span>
+          @if (bestTimeForCurrent()) {
+            <span class="best-time">{{ bestTimeForCurrent() }}</span>
+          }
         </div>
       }
 
@@ -188,6 +201,19 @@ interface GridSection {
         }
         }
       }
+
+      @if (showStats()) {
+        <app-puzzle-stats
+          [cards]="cards()"
+          [solvedPuzzles]="solvedPuzzles()"
+          [gaveUpPuzzles]="gaveUpPuzzles()"
+          [startedPuzzles]="startedPuzzles()"
+          [currentIndex]="currentIndex()"
+          [completionTimes]="bestTimes"
+          (selectPuzzle)="jumpToPuzzle($event)"
+          (close)="showStats.set(false)"
+        />
+      }
     </div>
   `,
   styles: `
@@ -265,6 +291,14 @@ interface GridSection {
       font-size: 1rem;
       font-weight: 600;
       color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .best-time {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      opacity: 0.6;
       font-variant-numeric: tabular-nums;
     }
     .puzzle-title {
@@ -529,6 +563,7 @@ export class MatrixComponent implements OnDestroy {
   private router = inject(Router);
   private cardService = inject(CardService);
   private userState = inject(UserStateService);
+  private celebration = inject(CelebrationService);
 
   currentIndex = signal(0);
   gridState = signal<Record<string, number>>({});
@@ -539,9 +574,13 @@ export class MatrixComponent implements OnDestroy {
   clueStruck = signal<Record<number, boolean>>({});
   returnIndex = signal<number | null>(null);
 
+  showStats = signal(false);
+  gaveUpPuzzles = signal<number[]>([]);
+
   private timerRef: ReturnType<typeof setInterval> | null = null;
-  private solvedPuzzles = signal<number[]>([]);
+  solvedPuzzles = signal<number[]>([]);
   private allGridStates: Record<number, Record<string, number>> = {};
+  bestTimes: Record<number, number> = {};
 
   private categoryId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')!))
@@ -567,7 +606,9 @@ export class MatrixComponent implements OnDestroy {
             if (saved) {
               this.currentIndex.set(Math.min(saved.index, cards.length - 1));
               this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
+              this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
               this.allGridStates = saved.gridStates ?? {};
+              this.bestTimes = saved.bestTimes ?? {};
               const gs = this.allGridStates[this.currentIndex()] ?? {};
               this.gridState.set(gs);
               if (this.solvedPuzzles().includes(this.currentIndex())) {
@@ -609,6 +650,14 @@ export class MatrixComponent implements OnDestroy {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
+  });
+
+  bestTimeForCurrent = computed(() => {
+    const secs = this.bestTimes[this.currentIndex()];
+    if (!secs) return '';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `Best: ${m}:${s.toString().padStart(2, '0')}`;
   });
 
   ngOnDestroy() {
@@ -684,7 +733,16 @@ export class MatrixComponent implements OnDestroy {
       }
     }
     this.gridState.set(newState);
-    this.markSolved();
+    this.solved.set(true);
+    this.stopTimer();
+    this.feedbackMsg.set('I gave up');
+    this.feedbackType.set('error');
+
+    const idx = this.currentIndex();
+    if (!this.gaveUpPuzzles().includes(idx)) {
+      this.gaveUpPuzzles.update(gp => [...gp, idx]);
+    }
+    this.persistProgress();
   }
 
   resetMatrix(): void {
@@ -696,6 +754,7 @@ export class MatrixComponent implements OnDestroy {
 
     const idx = this.currentIndex();
     this.solvedPuzzles.update(sp => sp.filter(i => i !== idx));
+    this.gaveUpPuzzles.update(gp => gp.filter(i => i !== idx));
     this.persistProgress();
     this.startTimer();
   }
@@ -736,6 +795,19 @@ export class MatrixComponent implements OnDestroy {
     } else {
       this.nextPuzzle();
     }
+  }
+
+  startedPuzzles = computed(() =>
+    Object.keys(this.allGridStates)
+      .map(Number)
+      .filter(i => Object.keys(this.allGridStates[i] ?? {}).length > 0)
+  );
+
+  jumpToPuzzle(idx: number): void {
+    this.saveCurrent();
+    this.currentIndex.set(idx);
+    this.loadCurrentPuzzle();
+    this.showStats.set(false);
   }
 
   private expectedCheckCount(): number {
@@ -808,9 +880,23 @@ export class MatrixComponent implements OnDestroy {
     this.feedbackType.set('success');
 
     const idx = this.currentIndex();
-    if (!this.solvedPuzzles().includes(idx)) {
+    const isFirstSolve = !this.solvedPuzzles().includes(idx);
+    if (isFirstSolve) {
       this.solvedPuzzles.update(sp => [...sp, idx]);
+      this.celebration.trigger();
     }
+
+    const elapsed = this.elapsedSeconds();
+    if (elapsed > 0) {
+      const prev = this.bestTimes[idx];
+      if (prev === undefined || elapsed < prev) {
+        this.bestTimes[idx] = elapsed;
+        if (prev !== undefined) {
+          this.feedbackMsg.set('New best time!');
+        }
+      }
+    }
+
     this.persistProgress();
   }
 
@@ -841,7 +927,7 @@ export class MatrixComponent implements OnDestroy {
     const idx = this.currentIndex();
     const gs = this.allGridStates[idx] ?? {};
     this.gridState.set(gs);
-    this.solved.set(this.solvedPuzzles().includes(idx));
+    this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
     this.clueStruck.set({});
     this.clearFeedback();
     this.elapsedSeconds.set(0);
@@ -859,6 +945,8 @@ export class MatrixComponent implements OnDestroy {
       index: this.currentIndex(),
       gridStates: this.allGridStates,
       solvedPuzzles: this.solvedPuzzles(),
+      gaveUpPuzzles: this.gaveUpPuzzles(),
+      bestTimes: this.bestTimes,
     });
   }
 }

@@ -4,13 +4,15 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { UserStateService } from '../../core/services/user-state.service';
+import { CelebrationService } from '../../core/services/celebration.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
+import { PuzzleStatsComponent } from '../../shared/components/puzzle-stats.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
 @Component({
   selector: 'app-nonogram',
-  imports: [CategoryIconComponent],
+  imports: [CategoryIconComponent, PuzzleStatsComponent],
   template: `
     <div class="nonogram container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
@@ -24,6 +26,14 @@ import { Category } from '../../core/models/category.model';
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="16" x2="12" y2="12"/>
               <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </button>
+          <button class="info-btn" (click)="showStats.set(true)" title="Puzzle progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
         </div>
@@ -111,6 +121,18 @@ import { Category } from '../../core/models/category.model';
             </div>
           }
         }
+      }
+
+      @if (showStats()) {
+        <app-puzzle-stats
+          [cards]="cards()"
+          [solvedPuzzles]="solvedPuzzles()"
+          [gaveUpPuzzles]="gaveUpPuzzles()"
+          [startedPuzzles]="startedPuzzles()"
+          [currentIndex]="currentIndex()"
+          (selectPuzzle)="jumpToPuzzle($event)"
+          (close)="showStats.set(false)"
+        />
       }
     </div>
   `,
@@ -378,13 +400,16 @@ export class NonogramComponent implements OnDestroy {
   private router = inject(Router);
   private cardService = inject(CardService);
   private userState = inject(UserStateService);
+  private celebration = inject(CelebrationService);
 
   currentIndex = signal(0);
   gridState = signal<Record<string, number>>({});
   solved = signal(false);
   returnIndex = signal<number | null>(null);
 
-  private solvedPuzzles = signal<number[]>([]);
+  showStats = signal(false);
+  solvedPuzzles = signal<number[]>([]);
+  gaveUpPuzzles = signal<number[]>([]);
   private allGridStates: Record<number, Record<string, number>> = {};
 
   private categoryId = toSignal(
@@ -411,6 +436,7 @@ export class NonogramComponent implements OnDestroy {
               if (saved) {
                 this.currentIndex.set(Math.min(saved.index, cards.length - 1));
                 this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
+                this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
                 this.allGridStates = saved.gridStates ?? {};
                 const gs = this.allGridStates[this.currentIndex()] ?? {};
                 this.gridState.set(gs);
@@ -511,6 +537,19 @@ export class NonogramComponent implements OnDestroy {
     }
   }
 
+  startedPuzzles = computed(() =>
+    Object.keys(this.allGridStates)
+      .map(Number)
+      .filter(i => Object.keys(this.allGridStates[i] ?? {}).length > 0)
+  );
+
+  jumpToPuzzle(idx: number): void {
+    this.saveCurrent();
+    this.currentIndex.set(idx);
+    this.loadCurrentPuzzle();
+    this.showStats.set(false);
+  }
+
   revealPuzzle(): void {
     const sol = this.solution();
     const newState: Record<string, number> = {};
@@ -520,7 +559,13 @@ export class NonogramComponent implements OnDestroy {
       }
     }
     this.gridState.set(newState);
-    this.markSolved();
+    this.solved.set(true);
+
+    const idx = this.currentIndex();
+    if (!this.gaveUpPuzzles().includes(idx)) {
+      this.gaveUpPuzzles.update(gp => [...gp, idx]);
+    }
+    this.persistProgress();
   }
 
   resetPuzzle(): void {
@@ -528,6 +573,7 @@ export class NonogramComponent implements OnDestroy {
     this.solved.set(false);
     const idx = this.currentIndex();
     this.solvedPuzzles.update(sp => sp.filter(i => i !== idx));
+    this.gaveUpPuzzles.update(gp => gp.filter(i => i !== idx));
     this.persistProgress();
   }
 
@@ -569,6 +615,7 @@ export class NonogramComponent implements OnDestroy {
     const idx = this.currentIndex();
     if (!this.solvedPuzzles().includes(idx)) {
       this.solvedPuzzles.update(sp => [...sp, idx]);
+      this.celebration.trigger();
     }
     this.persistProgress();
   }
@@ -581,7 +628,7 @@ export class NonogramComponent implements OnDestroy {
     const idx = this.currentIndex();
     const gs = this.allGridStates[idx] ?? {};
     this.gridState.set(gs);
-    this.solved.set(this.solvedPuzzles().includes(idx));
+    this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
     this.persistProgress();
   }
 
@@ -593,6 +640,7 @@ export class NonogramComponent implements OnDestroy {
       index: this.currentIndex(),
       gridStates: this.allGridStates,
       solvedPuzzles: this.solvedPuzzles(),
+      gaveUpPuzzles: this.gaveUpPuzzles(),
     });
   }
 }

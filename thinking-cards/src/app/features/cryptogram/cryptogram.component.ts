@@ -4,13 +4,15 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { switchMap, map, tap, from } from 'rxjs';
 import { CardService } from '../../core/services/card.service';
 import { UserStateService } from '../../core/services/user-state.service';
+import { CelebrationService } from '../../core/services/celebration.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
+import { PuzzleStatsComponent } from '../../shared/components/puzzle-stats.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
 @Component({
   selector: 'app-cryptogram',
-  imports: [CategoryIconComponent],
+  imports: [CategoryIconComponent, PuzzleStatsComponent],
   template: `
     <div class="cryptogram container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
@@ -24,6 +26,14 @@ import { Category } from '../../core/models/category.model';
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="16" x2="12" y2="12"/>
               <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </button>
+          <button class="info-btn" (click)="showStats.set(true)" title="Puzzle progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
         </div>
@@ -120,6 +130,18 @@ import { Category } from '../../core/models/category.model';
           </div>
         }
         }
+      }
+
+      @if (showStats()) {
+        <app-puzzle-stats
+          [cards]="cards()"
+          [solvedPuzzles]="solvedPuzzles()"
+          [gaveUpPuzzles]="gaveUpPuzzles()"
+          [startedPuzzles]="startedPuzzles()"
+          [currentIndex]="currentIndex()"
+          (selectPuzzle)="jumpToPuzzle($event)"
+          (close)="showStats.set(false)"
+        />
       }
     </div>
   `,
@@ -438,6 +460,7 @@ export class CryptogramComponent implements OnDestroy {
   private router = inject(Router);
   private cardService = inject(CardService);
   private userState = inject(UserStateService);
+  private celebration = inject(CelebrationService);
 
   readonly alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -448,7 +471,9 @@ export class CryptogramComponent implements OnDestroy {
   hintsUsed = signal(0);
   returnIndex = signal<number | null>(null);
 
-  private solvedPuzzles = signal<number[]>([]);
+  showStats = signal(false);
+  solvedPuzzles = signal<number[]>([]);
+  gaveUpPuzzles = signal<number[]>([]);
   private allGuessStates: Record<number, Record<string, string>> = {};
 
   private categoryId = toSignal(
@@ -475,6 +500,7 @@ export class CryptogramComponent implements OnDestroy {
               if (saved) {
                 this.currentIndex.set(Math.min(saved.index, cards.length - 1));
                 this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
+                this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
                 this.allGuessStates = saved.guessStates ?? {};
                 const gs = this.allGuessStates[this.currentIndex()] ?? {};
                 this.guesses.set(gs);
@@ -674,9 +700,10 @@ export class CryptogramComponent implements OnDestroy {
     this.guesses.set(allGuesses);
     this.selectedCipher.set(null);
     this.solved.set(true);
+
     const idx = this.currentIndex();
-    if (!this.solvedPuzzles().includes(idx)) {
-      this.solvedPuzzles.update(sp => [...sp, idx]);
+    if (!this.gaveUpPuzzles().includes(idx)) {
+      this.gaveUpPuzzles.update(gp => [...gp, idx]);
     }
     this.persistProgress();
   }
@@ -689,6 +716,7 @@ export class CryptogramComponent implements OnDestroy {
 
     const idx = this.currentIndex();
     this.solvedPuzzles.update(sp => sp.filter(i => i !== idx));
+    this.gaveUpPuzzles.update(gp => gp.filter(i => i !== idx));
     this.persistProgress();
   }
 
@@ -727,6 +755,19 @@ export class CryptogramComponent implements OnDestroy {
     } else {
       this.nextPuzzle();
     }
+  }
+
+  startedPuzzles = computed(() =>
+    Object.keys(this.allGuessStates)
+      .map(Number)
+      .filter(i => Object.keys(this.allGuessStates[i] ?? {}).length > 0)
+  );
+
+  jumpToPuzzle(idx: number): void {
+    this.saveCurrent();
+    this.currentIndex.set(idx);
+    this.loadCurrentPuzzle();
+    this.showStats.set(false);
   }
 
   private advanceSelection(current: string): void {
@@ -774,6 +815,7 @@ export class CryptogramComponent implements OnDestroy {
     const idx = this.currentIndex();
     if (!this.solvedPuzzles().includes(idx)) {
       this.solvedPuzzles.update(sp => [...sp, idx]);
+      this.celebration.trigger();
     }
     this.persistProgress();
   }
@@ -786,7 +828,7 @@ export class CryptogramComponent implements OnDestroy {
     const idx = this.currentIndex();
     const gs = this.allGuessStates[idx] ?? {};
     this.guesses.set(gs);
-    this.solved.set(this.solvedPuzzles().includes(idx));
+    this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
     this.selectedCipher.set(null);
     this.hintsUsed.set(0);
     this.persistProgress();
@@ -800,6 +842,7 @@ export class CryptogramComponent implements OnDestroy {
       index: this.currentIndex(),
       guessStates: this.allGuessStates,
       solvedPuzzles: this.solvedPuzzles(),
+      gaveUpPuzzles: this.gaveUpPuzzles(),
     });
   }
 }

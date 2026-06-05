@@ -4,6 +4,8 @@ import { SwUpdate } from '@angular/service-worker';
 import { filter } from 'rxjs';
 import { TopBarComponent } from './shared/components/top-bar.component';
 import { BottomBarComponent } from './shared/components/bottom-bar.component';
+import { ToastComponent } from './shared/components/toast.component';
+import { ConfettiComponent } from './shared/components/confetti.component';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
 import { routeAnimation } from './shared/animations/route-animations';
@@ -12,9 +14,11 @@ const HIDDEN_BAR_PATTERNS = ['/login', '/register', '/admin', '/category/', '/ma
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TopBarComponent, BottomBarComponent],
+  imports: [RouterOutlet, TopBarComponent, BottomBarComponent, ToastComponent, ConfettiComponent],
   animations: [routeAnimation],
   template: `
+    <app-toast />
+    <app-confetti />
     @if (updateAvailable()) {
       <button class="update-banner" (click)="applyUpdate()">
         A new version is available — tap to update

@@ -23,18 +23,22 @@ export interface MatrixProgress {
   index: number;
   gridStates: Record<number, Record<string, number>>;
   solvedPuzzles: number[];
+  gaveUpPuzzles?: number[];
+  bestTimes?: Record<number, number>;
 }
 
 export interface CryptogramProgress {
   index: number;
   guessStates: Record<number, Record<string, string>>;
   solvedPuzzles: number[];
+  gaveUpPuzzles?: number[];
 }
 
 export interface NonogramProgress {
   index: number;
   gridStates: Record<number, Record<string, number>>;
   solvedPuzzles: number[];
+  gaveUpPuzzles?: number[];
 }
 
 @Injectable({ providedIn: 'root' })

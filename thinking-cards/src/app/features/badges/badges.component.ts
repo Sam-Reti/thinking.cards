@@ -26,8 +26,10 @@ import { BadgeService } from '../../core/services/badge.service';
                   <path [attr.d]="p"/>
                 }
               </svg>
-              <span class="badge-name">{{ badge.name }}</span>
-              <span class="badge-desc">{{ badge.description }}</span>
+              <div class="badge-text">
+                <span class="badge-name">{{ badge.name }}</span>
+                <span class="badge-desc">{{ badge.description }}</span>
+              </div>
             </div>
           }
         </div>
@@ -125,18 +127,24 @@ import { BadgeService } from '../../core/services/badge.service';
       color: var(--accent);
     }
 
+    .badge-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
     .badge-name {
       font-family: 'Poppins', sans-serif;
       font-size: 0.9rem;
       font-weight: 600;
       color: var(--text);
-      flex: 1;
     }
 
     .badge-desc {
       font-size: 0.75rem;
       color: var(--text-muted);
-      white-space: nowrap;
     }
   `,
 })
