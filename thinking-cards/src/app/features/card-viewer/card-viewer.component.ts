@@ -10,6 +10,7 @@ import { UserStateService } from '../../core/services/user-state.service';
 import { QuestionCardComponent } from '../../shared/components/question-card.component';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { SwipeDirective } from '../../shared/directives/swipe.directive';
+import { isTypingTarget } from '../../shared/utils/dom-helpers';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
@@ -194,6 +195,7 @@ export class CardViewerComponent {
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(e: KeyboardEvent) {
+    if (isTypingTarget(e.target)) return;
     if (e.key === 'ArrowRight') this.next();
     if (e.key === 'ArrowLeft') this.prev();
   }

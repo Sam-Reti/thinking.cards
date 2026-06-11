@@ -7,6 +7,7 @@ import { FavoritesService } from '../../core/services/favorites.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { StreakService } from '../../core/services/streak.service';
 import { BadgeService } from '../../core/services/badge.service';
+import { NotesService } from '../../core/services/notes.service';
 import { Card } from '../../core/models/card.model';
 
 @Component({
@@ -64,6 +65,14 @@ import { Card } from '../../core/models/card.model';
           <path d="M8 20h8"/>
         </svg>
         Badges ({{ badgeService.earnedCount() }}/{{ badgeService.totalCount() }})
+      </button>
+
+      <button class="action-btn notebook-btn" (click)="goNotebook()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        Notebook ({{ notesService.count() }})
       </button>
 
       <button class="action-btn themes-btn" (click)="goThemes()">
@@ -251,7 +260,7 @@ import { Card } from '../../core/models/card.model';
       height: 20px;
     }
 
-    .badges-btn, .themes-btn {
+    .badges-btn, .notebook-btn, .themes-btn {
       background: var(--hover-overlay);
       color: var(--text);
       margin-bottom: 24px;
@@ -283,6 +292,7 @@ import { Card } from '../../core/models/card.model';
 export class ProfileComponent {
   readonly auth = inject(AuthService);
   readonly badgeService = inject(BadgeService);
+  readonly notesService = inject(NotesService);
   private router = inject(Router);
   private cardService = inject(CardService);
   private favoritesService = inject(FavoritesService);
@@ -331,6 +341,10 @@ export class ProfileComponent {
 
   goThemes() {
     this.router.navigate(['/themes']);
+  }
+
+  goNotebook() {
+    this.router.navigate(['/notebook']);
   }
 
   goAdmin() {

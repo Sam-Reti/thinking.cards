@@ -20,7 +20,9 @@ import { AuthService } from '../../core/services/auth.service';
         <form (ngSubmit)="onRegister()">
           <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
           <input type="password" placeholder="Password (min 6 chars)" [(ngModel)]="password" name="password" required />
-          <button type="submit" class="btn-primary">Create Account</button>
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            {{ loading() ? 'Creating account...' : 'Create Account' }}
+          </button>
         </form>
 
         <p class="switch">
@@ -82,6 +84,7 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 1rem;
       transition: opacity 0.2s;
       &:hover { opacity: 0.9; }
+      &:disabled { opacity: 0.6; cursor: default; }
     }
     .switch {
       margin-top: 20px;
@@ -97,11 +100,18 @@ export class RegisterComponent {
   email = '';
   password = '';
   error = signal('');
+  loading = signal(false);
 
   onRegister() {
+    if (this.loading()) return;
+    this.error.set('');
+    this.loading.set(true);
     this.auth.register(this.email, this.password).subscribe({
       next: () => this.router.navigate(['/']),
-      error: (e) => this.error.set(e.message),
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e.message);
+      },
     });
   }
 }

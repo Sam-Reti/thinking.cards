@@ -89,7 +89,8 @@ export class QuizzesComponent {
       return Math.round((data.score / (data.totalCards || 1)) * 100);
     }
     const total = data.totalCards || this.cardCountFor(cat.id);
-    return total ? Math.round((data.index / total) * 100) : 0;
+    const answered = Math.max(data.totalAnswered ?? 0, data.index);
+    return total ? Math.round((answered / total) * 100) : 0;
   }
 
   private cardCountFor(categoryId: string): number {

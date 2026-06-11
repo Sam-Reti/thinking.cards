@@ -123,6 +123,15 @@ export const routes: Routes = [
     data: { animation: 'nonogram' },
   },
   {
+    path: 'codebreaker/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/codebreaker/codebreaker.component').then(
+        (m) => m.CodebreakerComponent
+      ),
+    data: { animation: 'codebreaker' },
+  },
+  {
     path: 'badges',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -139,6 +148,15 @@ export const routes: Routes = [
         (m) => m.ThemesComponent
       ),
     data: { animation: 'themes' },
+  },
+  {
+    path: 'notebook',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/notebook/notebook.component').then(
+        (m) => m.NotebookComponent
+      ),
+    data: { animation: 'notebook' },
   },
   {
     path: 'profile',

@@ -79,7 +79,9 @@ export class PuzzlesComponent {
   );
 
   puzzleCategories = computed(() =>
-    this.allCategories().filter(c => c.type === 'matrix' || c.type === 'cryptogram' || c.type === 'nonogram')
+    this.allCategories().filter(c =>
+      c.type === 'matrix' || c.type === 'cryptogram' || c.type === 'nonogram' || c.type === 'codebreaker'
+    )
   );
 
   progressFor(cat: Category): number {
@@ -92,6 +94,13 @@ export class PuzzlesComponent {
     }
     if (cat.type === 'nonogram') {
       const data = this.userState.allNonogramProgress().get(cat.id);
+      if (!data) return 0;
+      const solved = data.solvedPuzzles?.length ?? 0;
+      const total = this.puzzleCardCountFor(cat.id);
+      return total ? Math.round((solved / total) * 100) : 0;
+    }
+    if (cat.type === 'codebreaker') {
+      const data = this.userState.allCodebreakerProgress().get(cat.id);
       if (!data) return 0;
       const solved = data.solvedPuzzles?.length ?? 0;
       const total = this.puzzleCardCountFor(cat.id);
@@ -115,6 +124,10 @@ export class PuzzlesComponent {
     }
     if (cat.type === 'nonogram') {
       this.router.navigate(['/nonogram', cat.id]);
+      return;
+    }
+    if (cat.type === 'codebreaker') {
+      this.router.navigate(['/codebreaker', cat.id]);
       return;
     }
     this.router.navigate(['/matrix', cat.id]);

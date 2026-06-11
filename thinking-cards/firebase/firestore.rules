@@ -38,7 +38,7 @@ service cloud.firestore {
         && request.resource.data.color is string
         && request.resource.data.color.matches('^#[0-9A-Fa-f]{6}$')
         && request.resource.data.order is int
-        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz', 'matrix', 'cryptogram', 'nonogram']);
+        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz', 'matrix', 'cryptogram', 'nonogram', 'codebreaker']);
 
       allow update: if isAdmin()
         && hasOnly(['name', 'description', 'color', 'order', 'type'])
@@ -50,7 +50,7 @@ service cloud.firestore {
         && request.resource.data.color is string
         && request.resource.data.color.matches('^#[0-9A-Fa-f]{6}$')
         && request.resource.data.order is int
-        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz', 'matrix', 'cryptogram', 'nonogram']);
+        && (!('type' in request.resource.data) || request.resource.data.type in ['standard', 'quiz', 'matrix', 'cryptogram', 'nonogram', 'codebreaker']);
 
       allow delete: if isAdmin();
     }
@@ -61,27 +61,27 @@ service cloud.firestore {
 
       allow create: if isAdmin()
         && hasAll(['questionText', 'categoryId', 'cardNumber'])
-        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation', 'matrixGroups', 'matrixClues', 'matrixSolution', 'matrixScenario', 'matrixExplanation', 'cryptogramPlaintext', 'cryptogramAuthor', 'difficulty', 'nonogramSolution', 'nonogramCols'])
+        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation', 'matrixGroups', 'matrixClues', 'matrixSolution', 'matrixScenario', 'matrixExplanation', 'cryptogramPlaintext', 'cryptogramAuthor', 'difficulty', 'nonogramSolution', 'nonogramCols', 'codebreakerAnswer', 'codebreakerClues'])
         && request.resource.data.questionText is string
         && request.resource.data.questionText.size() > 0
         && request.resource.data.questionText.size() <= 2000
         && request.resource.data.categoryId is string
         && request.resource.data.categoryId.size() > 0
         && request.resource.data.cardNumber is int
-        && request.resource.data.cardNumber > 0
+        && request.resource.data.cardNumber >= 0
         && (!('options' in request.resource.data) || request.resource.data.options is list)
         && (!('correctIndex' in request.resource.data) || request.resource.data.correctIndex is int)
         && (!('explanation' in request.resource.data) || request.resource.data.explanation is string);
 
       allow update: if isAdmin()
-        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation', 'matrixGroups', 'matrixClues', 'matrixSolution', 'matrixScenario', 'matrixExplanation', 'cryptogramPlaintext', 'cryptogramAuthor', 'difficulty', 'nonogramSolution', 'nonogramCols'])
+        && hasOnly(['questionText', 'categoryId', 'cardNumber', 'options', 'correctIndex', 'explanation', 'matrixGroups', 'matrixClues', 'matrixSolution', 'matrixScenario', 'matrixExplanation', 'cryptogramPlaintext', 'cryptogramAuthor', 'difficulty', 'nonogramSolution', 'nonogramCols', 'codebreakerAnswer', 'codebreakerClues'])
         && request.resource.data.questionText is string
         && request.resource.data.questionText.size() > 0
         && request.resource.data.questionText.size() <= 2000
         && request.resource.data.categoryId is string
         && request.resource.data.categoryId.size() > 0
         && request.resource.data.cardNumber is int
-        && request.resource.data.cardNumber > 0
+        && request.resource.data.cardNumber >= 0
         && (!('options' in request.resource.data) || request.resource.data.options is list)
         && (!('correctIndex' in request.resource.data) || request.resource.data.correctIndex is int)
         && (!('explanation' in request.resource.data) || request.resource.data.explanation is string);
@@ -117,6 +117,21 @@ service cloud.firestore {
         && request.resource.data.addedAt is timestamp;
 
       allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    // ── Notes ─────────────────────────────────────────────────────────
+    match /users/{userId}/notes/{cardId} {
+      allow read: if isOwner(userId);
+
+      allow create, update: if isOwner(userId)
+        && hasAll(['text', 'updatedAt'])
+        && hasOnly(['text', 'updatedAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 10000
+        && request.resource.data.updatedAt is timestamp;
+
       allow delete: if isOwner(userId);
     }
 
@@ -171,6 +186,11 @@ service cloud.firestore {
 
     // ── Nonogram State (nonogram progress) ────────────────────────
     match /users/{userId}/nonogramState/{categoryId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Codebreaker State (codebreaker progress) ──────────────────
+    match /users/{userId}/codebreakerState/{categoryId} {
       allow read, write: if isOwner(userId);
     }
 

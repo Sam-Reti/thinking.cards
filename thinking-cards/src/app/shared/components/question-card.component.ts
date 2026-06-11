@@ -2,13 +2,16 @@ import { Component, input, output, computed, inject, signal , ChangeDetectionStr
 import { Card } from '../../core/models/card.model';
 import { CardImageService } from '../../core/services/card-image.service';
 import { ShareService } from '../../core/services/share.service';
+import { NoteButtonComponent } from './note-button.component';
 import { parseCardBlocks } from '../utils/card-parser';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-question-card',
+  imports: [NoteButtonComponent],
   template: `
     <div class="card" [style.border-color]="color()">
+      <app-note-button class="note-anchor" [cardId]="card().id" [cardLabel]="noteLabel()" variant="flat" />
       <button class="share-btn" (click)="onShare($event)" aria-label="Share card">
         @if (showCheck()) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -65,6 +68,12 @@ import { parseCardBlocks } from '../utils/card-parser';
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       user-select: none;
       touch-action: pan-y;
+    }
+    .note-anchor {
+      position: absolute;
+      top: 12px;
+      right: 84px;
+      z-index: 1;
     }
     .share-btn {
       position: absolute;
@@ -171,6 +180,12 @@ export class QuestionCardComponent {
 
   blocks = computed(() => parseCardBlocks(this.card().questionText));
   showCheck = signal(false);
+
+  noteLabel = computed(() => {
+    const num = `#${this.card().cardNumber}`;
+    const cat = this.categoryName();
+    return cat ? `${num} · ${cat}` : num;
+  });
 
   onHeart(event: MouseEvent): void {
     event.stopPropagation();

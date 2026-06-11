@@ -14,8 +14,7 @@
    - When multiple concerns emerge, split them into focused units.
    - Clarity of purpose makes code easier to read and maintain.
 
-3. **Write Pure
-   Functions With Safe Defaults**
+3. **Write Pure Functions With Safe Defaults**
    - Favor deterministic, side-effect-free functions for predictable behavior.
    - Use default parameters to keep logic clean and straightforward.
    - Let dependencies be explicit so the code is easy to follow.

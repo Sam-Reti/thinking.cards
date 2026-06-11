@@ -4,6 +4,12 @@ export interface MatrixGroup {
   labels: string[];
 }
 
+export interface CodebreakerClue {
+  guess: string;
+  correct: number;
+  misplaced: number;
+}
+
 export interface Card {
   id: string;
   questionText: string;
@@ -22,4 +28,6 @@ export interface Card {
   cryptogramAuthor?: string;
   nonogramSolution?: number[];
   nonogramCols?: number;
+  codebreakerAnswer?: string;
+  codebreakerClues?: CodebreakerClue[];
 }

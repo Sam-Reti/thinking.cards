@@ -43,6 +43,14 @@ export interface NonogramProgress {
   bestTimes?: Record<number, number>;
 }
 
+export interface CodebreakerProgress {
+  index: number;
+  answerStates: Record<number, string[]>;
+  solvedPuzzles: number[];
+  gaveUpPuzzles?: number[];
+  bestTimes?: Record<number, number>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserStateService {
   private auth = inject(AuthService);
@@ -52,11 +60,13 @@ export class UserStateService {
   private matrixUnsub: Unsubscribe | null = null;
   private cryptogramUnsub: Unsubscribe | null = null;
   private nonogramUnsub: Unsubscribe | null = null;
+  private codebreakerUnsub: Unsubscribe | null = null;
 
   readonly allQuizProgress = signal<Map<string, QuizProgress>>(new Map());
   readonly allMatrixProgress = signal<Map<string, MatrixProgress>>(new Map());
   readonly allCryptogramProgress = signal<Map<string, CryptogramProgress>>(new Map());
   readonly allNonogramProgress = signal<Map<string, NonogramProgress>>(new Map());
+  readonly allCodebreakerProgress = signal<Map<string, CodebreakerProgress>>(new Map());
 
   constructor() {
     effect(() => {
@@ -67,6 +77,7 @@ export class UserStateService {
         this.allMatrixProgress.set(new Map());
         this.allCryptogramProgress.set(new Map());
         this.allNonogramProgress.set(new Map());
+        this.allCodebreakerProgress.set(new Map());
         return;
       }
 
@@ -103,6 +114,15 @@ export class UserStateService {
           const m = new Map<string, NonogramProgress>();
           for (const d of snap.docs) m.set(d.id, d.data() as NonogramProgress);
           this.allNonogramProgress.set(m);
+        });
+      });
+
+      const codebreakerCol = collection(this.db, `users/${user.uid}/codebreakerState`);
+      this.codebreakerUnsub = onSnapshot(codebreakerCol, (snap) => {
+        this.zone.run(() => {
+          const m = new Map<string, CodebreakerProgress>();
+          for (const d of snap.docs) m.set(d.id, d.data() as CodebreakerProgress);
+          this.allCodebreakerProgress.set(m);
         });
       });
     });
@@ -193,6 +213,23 @@ export class UserStateService {
     return snap.exists() ? (snap.data() as NonogramProgress) : null;
   }
 
+  // ── Codebreaker Progress ────────────────────────────────────────
+
+  saveCodebreakerProgress(categoryId: string, data: CodebreakerProgress): void {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    const ref = doc(this.db, `users/${user.uid}/codebreakerState`, categoryId);
+    setDoc(ref, { ...data, updatedAt: serverTimestamp() }).catch(() => {});
+  }
+
+  async loadCodebreakerProgress(categoryId: string): Promise<CodebreakerProgress | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
+    const ref = doc(this.db, `users/${user.uid}/codebreakerState`, categoryId);
+    const snap = await getDoc(ref);
+    return snap.exists() ? (snap.data() as CodebreakerProgress) : null;
+  }
+
   private cleanup(): void {
     this.quizUnsub?.();
     this.quizUnsub = null;
@@ -202,5 +239,7 @@ export class UserStateService {
     this.cryptogramUnsub = null;
     this.nonogramUnsub?.();
     this.nonogramUnsub = null;
+    this.codebreakerUnsub?.();
+    this.codebreakerUnsub = null;
   }
 }

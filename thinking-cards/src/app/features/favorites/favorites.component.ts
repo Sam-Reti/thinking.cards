@@ -7,6 +7,7 @@ import { SwipeDirective } from '../../shared/directives/swipe.directive';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 import { filterStandardCards, categoryColorFor, categoryNameFor } from '../../shared/utils/category-helpers';
+import { isTypingTarget } from '../../shared/utils/dom-helpers';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,6 +143,7 @@ export class FavoritesComponent {
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(e: KeyboardEvent) {
+    if (isTypingTarget(e.target)) return;
     if (e.key === 'ArrowRight') this.next();
     if (e.key === 'ArrowLeft') this.prev();
   }

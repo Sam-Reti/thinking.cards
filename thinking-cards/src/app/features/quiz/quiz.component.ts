@@ -6,6 +6,7 @@ import { CardService } from '../../core/services/card.service';
 import { StreakService } from '../../core/services/streak.service';
 import { UserStateService, QuizProgress } from '../../core/services/user-state.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
+import { NoteButtonComponent } from '../../shared/components/note-button.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
@@ -20,7 +21,7 @@ type QuizState = 'question' | 'answered' | 'complete';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-quiz',
-  imports: [CategoryIconComponent],
+  imports: [CategoryIconComponent, NoteButtonComponent],
   template: `
     <div class="quiz container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
@@ -46,6 +47,7 @@ type QuizState = 'question' | 'answered' | 'complete';
         @case ('question') {
           @if (currentShuffled(); as sc) {
             <div class="quote-card" [style.border-color]="category()?.color ?? '#e94560'">
+              <app-note-button class="note-anchor" [cardId]="sc.card.id" [cardLabel]="noteLabel(sc.card)" variant="flat" />
               <span class="card-number">#{{ sc.card.cardNumber }}</span>
               <p class="quote">"{{ sc.card.questionText }}"</p>
             </div>
@@ -62,6 +64,7 @@ type QuizState = 'question' | 'answered' | 'complete';
         @case ('answered') {
           @if (currentShuffled(); as sc) {
             <div class="quote-card" [style.border-color]="category()?.color ?? '#e94560'">
+              <app-note-button class="note-anchor" [cardId]="sc.card.id" [cardLabel]="noteLabel(sc.card)" variant="flat" />
               <span class="card-number">#{{ sc.card.cardNumber }}</span>
               <p class="quote">"{{ sc.card.questionText }}"</p>
             </div>
@@ -112,7 +115,7 @@ type QuizState = 'question' | 'answered' | 'complete';
               <div class="results-bar-fill" [style.width.%]="scorePercent()" [style.background]="category()?.color ?? '#e94560'"></div>
             </div>
             <button class="play-again-btn" (click)="playAgain()">Play Again</button>
-            <button class="home-btn" (click)="goBack()">Back to Home</button>
+            <button class="home-btn" (click)="goBack()">Back to Quizzes</button>
           </div>
         }
       }
@@ -182,6 +185,12 @@ type QuizState = 'question' | 'answered' | 'complete';
     }
 
     /* Quote card */
+    .note-anchor {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1;
+    }
     .quote-card {
       position: relative;
       width: 100%;
@@ -383,17 +392,7 @@ export class QuizComponent {
         this.shuffledCards.set(cards.map(c => this.shuffleOptions(c)));
         return from(this.userState.loadQuizProgress(this.categoryId()!)).pipe(
           tap(saved => {
-            if (!saved) return;
-            if (saved.completed) {
-              this.score.set(saved.score);
-              this.totalAnswered.set(saved.totalCards ?? cards.length);
-              this.currentIndex.set(cards.length - 1);
-              this.state.set('complete');
-            } else if (saved.index < cards.length) {
-              this.currentIndex.set(saved.index);
-              this.score.set(saved.score);
-              this.totalAnswered.set(saved.totalAnswered);
-            }
+            if (saved && cards.length) this.restoreProgress(saved, cards.length);
           }),
           map(() => cards),
         );
@@ -417,7 +416,8 @@ export class QuizComponent {
   progressPercent = computed(() => {
     const total = this.cards().length;
     if (!total) return 0;
-    return (this.currentIndex() / total) * 100;
+    const answered = this.currentIndex() + (this.state() === 'answered' ? 1 : 0);
+    return (answered / total) * 100;
   });
 
   scorePercent = computed(() => {
@@ -466,12 +466,42 @@ export class QuizComponent {
   }
 
   goBack() {
-    this.router.navigate(['/']);
+    this.router.navigate(['/quizzes']);
+  }
+
+  noteLabel(card: Card): string {
+    const cat = this.category()?.name;
+    return cat ? `#${card.cardNumber} · ${cat}` : `#${card.cardNumber}`;
+  }
+
+  private restoreProgress(saved: QuizProgress, totalCards: number): void {
+    if (saved.completed) {
+      this.showResults(saved.score, saved.totalAnswered ?? saved.totalCards ?? totalCards, totalCards);
+      return;
+    }
+    const answered = saved.totalAnswered ?? 0;
+    const resumeIndex = answered > saved.index ? saved.index + 1 : saved.index;
+    if (resumeIndex >= totalCards) {
+      this.showResults(saved.score, answered, totalCards);
+      this.saveCompleted();
+      return;
+    }
+    this.score.set(saved.score);
+    this.totalAnswered.set(answered);
+    this.currentIndex.set(resumeIndex);
+  }
+
+  private showResults(score: number, totalAnswered: number, totalCards: number): void {
+    this.score.set(score);
+    this.totalAnswered.set(totalAnswered);
+    this.currentIndex.set(totalCards - 1);
+    this.state.set('complete');
   }
 
   private shuffleOptions(card: Card): ShuffledCard {
     const options = [...(card.options ?? [])];
-    const correctAnswer = options[card.correctIndex ?? 0];
+    const safeIndex = Math.min(Math.max(card.correctIndex ?? 0, 0), options.length - 1);
+    const correctAnswer = options[safeIndex];
     for (let i = options.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [options[i], options[j]] = [options[j], options[i]];

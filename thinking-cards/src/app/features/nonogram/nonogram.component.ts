@@ -7,13 +7,14 @@ import { UserStateService } from '../../core/services/user-state.service';
 import { CelebrationService } from '../../core/services/celebration.service';
 import { CategoryIconComponent } from '../../shared/components/category-icon.component';
 import { PuzzleStatsComponent } from '../../shared/components/puzzle-stats.component';
+import { NoteButtonComponent } from '../../shared/components/note-button.component';
 import { Card } from '../../core/models/card.model';
 import { Category } from '../../core/models/category.model';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-nonogram',
-  imports: [CategoryIconComponent, PuzzleStatsComponent],
+  imports: [CategoryIconComponent, PuzzleStatsComponent, NoteButtonComponent],
   template: `
     <div class="nonogram container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
@@ -22,14 +23,14 @@ import { Category } from '../../core/models/category.model';
         <div class="header-bar" [style.border-color]="cat.color">
           <app-category-icon [name]="cat.name" class="title-icon" />
           <h2 class="cat-title" [style.color]="cat.color">{{ cat.name }}</h2>
-          <button class="info-btn" (click)="showInstructions()" title="How to play">
+          <button class="info-btn" (click)="showInstructions()" title="How to play" aria-label="How to play">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="16" x2="12" y2="12"/>
               <line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
           </button>
-          <button class="info-btn" (click)="showStats.set(true)" title="Puzzle progress">
+          <button class="info-btn" (click)="showStats.set(true)" title="Puzzle progress" aria-label="Puzzle progress">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1"/>
               <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -37,6 +38,9 @@ import { Category } from '../../core/models/category.model';
               <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
+          @if (!isInstructionCard() && currentCard(); as c) {
+            <app-note-button [cardId]="c.id" [cardLabel]="'#' + c.cardNumber + ' · ' + cat.name" />
+          }
           <span class="timer">{{ formattedTime() }}</span>
           @if (bestTimeForCurrent()) {
             <span class="best-time">{{ bestTimeForCurrent() }}</span>

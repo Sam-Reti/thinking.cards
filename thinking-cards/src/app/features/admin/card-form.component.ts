@@ -19,7 +19,7 @@ import { Card } from '../../core/models/card.model';
         </select>
         <input type="number" placeholder="Card Number (1-10)" [(ngModel)]="cardNumber" name="cardNumber" required min="1" />
         <textarea placeholder="Question text" [(ngModel)]="questionText" name="questionText" rows="3" required></textarea>
-        @if (!isQuiz() && !isMatrix() && !isCryptogram() && !isNonogram()) {
+        @if (!isQuiz() && !isMatrix() && !isCryptogram() && !isNonogram() && !isCodebreaker()) {
           <p class="hint">Line breaks = title + body | use • for bullets | Name: for quotes</p>
         }
         @if (isQuiz()) {
@@ -51,6 +51,13 @@ import { Card } from '../../core/models/card.model';
             <p class="quiz-label">Nonogram Fields</p>
             <textarea placeholder="Solution JSON: [[1,0,1],[0,1,0],...]" [(ngModel)]="nonogramSolutionText" name="nonogramSolution" rows="4"></textarea>
             <textarea placeholder="Explanation (shown after solving)" [(ngModel)]="explanation" name="nonogramExplanation" rows="3"></textarea>
+          </div>
+        }
+        @if (isCodebreaker()) {
+          <div class="quiz-fields">
+            <p class="quiz-label">Codebreaker Fields</p>
+            <input placeholder="Answer (e.g. 1234)" [(ngModel)]="codebreakerAnswer" name="codebreakerAnswer" />
+            <textarea placeholder="Clues JSON: [{&quot;guess&quot;:&quot;123&quot;,&quot;correct&quot;:1,&quot;misplaced&quot;:1}, ...]" [(ngModel)]="codebreakerCluesText" name="codebreakerClues" rows="5"></textarea>
           </div>
         }
         @if (isMatrix()) {
@@ -163,6 +170,9 @@ export class CardFormComponent {
 
   nonogramSolutionText = '';
 
+  codebreakerAnswer = '';
+  codebreakerCluesText = '';
+
   matrixScenario = '';
   matrixGroupNames = ['', '', ''];
   matrixGroupItems = ['', '', ''];
@@ -193,6 +203,12 @@ export class CardFormComponent {
     const cats = this.categories();
     const selected = cats.find(c => c.id === this.categoryId);
     return selected?.type === 'nonogram';
+  });
+
+  isCodebreaker = computed(() => {
+    const cats = this.categories();
+    const selected = cats.find(c => c.id === this.categoryId);
+    return selected?.type === 'codebreaker';
   });
 
   onCategoryChange(categoryId: string) {
@@ -227,6 +243,11 @@ export class CardFormComponent {
       } catch {}
     }
 
+    if (this.isCodebreaker()) {
+      card.codebreakerAnswer = this.codebreakerAnswer;
+      try { card.codebreakerClues = JSON.parse(this.codebreakerCluesText); } catch {}
+    }
+
     if (this.isMatrix()) {
       card.matrixScenario = this.matrixScenario;
       card.matrixGroups = this.matrixGroupNames.map((name, i) => ({
@@ -249,6 +270,8 @@ export class CardFormComponent {
       this.cryptogramPlaintext = '';
       this.cryptogramAuthor = '';
       this.nonogramSolutionText = '';
+      this.codebreakerAnswer = '';
+      this.codebreakerCluesText = '';
       this.matrixScenario = '';
       this.matrixGroupNames = ['', '', ''];
       this.matrixGroupItems = ['', '', ''];

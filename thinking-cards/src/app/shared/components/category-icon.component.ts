@@ -89,6 +89,18 @@ function hashCode(str: string): number {
           <rect x="31" y="31" width="7" height="7" fill="currentColor"/>
         }
 
+        @case ('codebreakers') {
+          <!-- Number lock / combination icon -->
+          <rect x="10" y="14" width="28" height="24" rx="4" stroke="currentColor" stroke-width="2.5" fill="none"/>
+          <circle cx="19" cy="26" r="3.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <circle cx="29" cy="26" r="3.5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <line x1="19" y1="22.5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="29" y1="22.5" x2="29" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <text x="19" y="30" text-anchor="middle" font-size="5" font-weight="bold" fill="currentColor" font-family="Poppins, sans-serif">?</text>
+          <text x="29" y="30" text-anchor="middle" font-size="5" font-weight="bold" fill="currentColor" font-family="Poppins, sans-serif">?</text>
+          <path d="M16 14v-3a8 8 0 0 1 16 0v3" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        }
+
         @case ('logic-matrix') {
           <!-- 3x3 grid pattern -->
           <rect x="8" y="8" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>

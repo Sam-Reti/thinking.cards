@@ -23,7 +23,9 @@ import { AuthService } from '../../core/services/auth.service';
         @if (showReset()) {
           <form (ngSubmit)="onReset()">
             <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
-            <button type="submit" class="btn-primary">Send Reset Link</button>
+            <button type="submit" class="btn-primary" [disabled]="loading()">
+              {{ loading() ? 'Sending...' : 'Send Reset Link' }}
+            </button>
           </form>
           <p class="switch">
             <a (click)="showReset.set(false)">Back to sign in</a>
@@ -32,10 +34,12 @@ import { AuthService } from '../../core/services/auth.service';
           <form (ngSubmit)="onLogin()">
             <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
             <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
-            <button type="submit" class="btn-primary">Sign In</button>
+            <button type="submit" class="btn-primary" [disabled]="loading()">
+              {{ loading() ? 'Signing in...' : 'Sign In' }}
+            </button>
           </form>
 
-          <button class="btn-google" (click)="onGoogle()">Sign in with Google</button>
+          <button class="btn-google" (click)="onGoogle()" [disabled]="loading()">Sign in with Google</button>
 
           <p class="forgot">
             <a (click)="showReset.set(true)">Forgot password?</a>
@@ -103,6 +107,7 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 1rem;
       transition: opacity 0.2s;
       &:hover { opacity: 0.9; }
+      &:disabled { opacity: 0.6; cursor: default; }
     }
     .btn-google {
       width: 100%;
@@ -147,27 +152,48 @@ export class LoginComponent {
   error = signal('');
   showReset = signal(false);
   resetSent = signal(false);
+  loading = signal(false);
 
   onReset() {
+    if (this.loading()) return;
     this.error.set('');
     this.resetSent.set(false);
+    this.loading.set(true);
     this.auth.sendPasswordReset(this.email).subscribe({
-      next: () => this.resetSent.set(true),
-      error: (e) => this.error.set(e.message),
+      next: () => {
+        this.loading.set(false);
+        this.resetSent.set(true);
+      },
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e.message);
+      },
     });
   }
 
   onLogin() {
+    if (this.loading()) return;
+    this.error.set('');
+    this.loading.set(true);
     this.auth.login(this.email, this.password).subscribe({
       next: () => this.router.navigate(['/']),
-      error: (e) => this.error.set(e.message),
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e.message);
+      },
     });
   }
 
   onGoogle() {
+    if (this.loading()) return;
+    this.error.set('');
+    this.loading.set(true);
     this.auth.loginWithGoogle().subscribe({
       next: () => this.router.navigate(['/']),
-      error: (e) => this.error.set(e.message),
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e.message);
+      },
     });
   }
 }

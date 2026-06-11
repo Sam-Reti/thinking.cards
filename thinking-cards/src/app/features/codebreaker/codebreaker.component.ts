@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy , ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { switchMap, map, tap, from } from 'rxjs';
@@ -13,10 +13,10 @@ import { Category } from '../../core/models/category.model';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  selector: 'app-cryptogram',
+  selector: 'app-codebreaker',
   imports: [CategoryIconComponent, PuzzleStatsComponent, NoteButtonComponent],
   template: `
-    <div class="cryptogram container">
+    <div class="codebreaker container">
       <button class="back-btn" (click)="goBack()">&larr; Back</button>
 
       @if (category(); as cat) {
@@ -67,58 +67,53 @@ import { Category } from '../../core/models/category.model';
           }
         </div>
 
-        @if (cipherTypeLabel(); as label) {
-          <div class="cipher-type-label">{{ label }}</div>
-        }
-
-        <div class="cipher-display">
-          @for (word of cipherWords(); track $index) {
-            <span class="cipher-word">
-              @for (cell of word; track $index) {
-                @if (cell.isLetter) {
-                  <span
-                    class="cipher-cell"
-                    [class.selected]="selectedCipher() === cell.key"
-                    [class.correct]="solved()"
-                    (click)="selectCipher(cell.key)"
-                  >
-                    <span class="cipher-char">{{ cell.cipher }}</span>
-                    <span class="guess-char" [class.filled]="guessFor(cell.key)">
-                      {{ guessFor(cell.key) || '\u00A0' }}
-                    </span>
-                  </span>
-                } @else {
-                  <span class="cipher-punct">{{ cell.cipher }}</span>
+        <div class="clue-table">
+          @for (clue of card.codebreakerClues; track $index) {
+            <div class="clue-row">
+              <div class="clue-digits">
+                @for (digit of clue.guess.split(''); track $index) {
+                  <span class="clue-digit">{{ digit }}</span>
                 }
-              }
-            </span>
+              </div>
+              <div class="clue-feedback">
+                <span class="feedback-correct">{{ clue.correct }}</span> correct
+                <span class="feedback-sep">&middot;</span>
+                <span class="feedback-misplaced">{{ clue.misplaced }}</span> misplaced
+              </div>
+            </div>
           }
         </div>
 
-        @if (solved()) {
-          <div class="author-reveal">
-            — {{ currentCard()!.cryptogramAuthor }}
+        <div class="answer-section">
+          <p class="answer-label">Your Answer</p>
+          <div class="answer-row">
+            @for (digit of answer(); track $index) {
+              <button
+                class="answer-digit"
+                [class.selected]="selectedDigitIndex() === $index"
+                [class.correct]="solved()"
+                [class.filled]="digit !== ''"
+                (click)="selectDigit($index)"
+              >{{ digit || '\u00A0' }}</button>
+            }
           </div>
-
-          @if (currentCard()!.explanation) {
-            <div class="explanation-panel">
-              <h3 class="section-label">About this quote</h3>
-              <p class="explanation-text">{{ currentCard()!.explanation }}</p>
-            </div>
-          }
-        }
+        </div>
 
         @if (!solved()) {
-          <div class="picker-grid">
-            @for (letter of alphabet; track letter) {
-              <button
-                class="picker-btn"
-                [class.used]="isLetterUsed(letter)"
-                (click)="assignLetter(letter)"
-              >{{ letter }}</button>
+          <div class="numpad">
+            @for (n of numpadKeys; track n) {
+              <button class="numpad-btn" (click)="enterDigit(n)">{{ n }}</button>
             }
-            <button class="picker-btn clear-btn" (click)="clearSelected()">&#x232b;</button>
+            <button class="numpad-btn clear-btn" (click)="clearDigit()">&#x232b;</button>
           </div>
+
+          <button class="btn primary check-btn" (click)="checkAnswer()" [disabled]="!isAnswerComplete()">
+            Check Answer
+          </button>
+        }
+
+        @if (solved() && !isGaveUp()) {
+          <div class="solved-message">Cracked it!</div>
         }
 
         <div class="nav-row">
@@ -129,10 +124,10 @@ import { Category } from '../../core/models/category.model';
 
         @if (!solved()) {
           <div class="action-buttons">
-            <button class="btn secondary" (click)="useHint()">Hint ({{ hintsUsed() }})</button>
+            <button class="btn secondary" (click)="useHint()">Hint</button>
             <button class="btn secondary" (click)="resetPuzzle()">Reset</button>
           </div>
-          <button class="give-up-btn" (click)="revealCryptogram()">I give up — show answer</button>
+          <button class="give-up-btn" (click)="revealAnswer()">I give up — show answer</button>
         } @else {
           <div class="action-buttons">
             <button class="btn secondary" (click)="resetPuzzle()">Reset</button>
@@ -156,13 +151,13 @@ import { Category } from '../../core/models/category.model';
     </div>
   `,
   styles: `
-    .cryptogram {
+    .codebreaker {
       padding-top: 24px;
       padding-bottom: 64px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      max-width: 680px;
+      max-width: 480px;
     }
     .back-btn {
       align-self: flex-start;
@@ -278,126 +273,161 @@ import { Category } from '../../core/models/category.model';
       color: #a25eff;
     }
 
-    .cipher-type-label {
-      font-size: 0.7rem;
+    /* Clue table */
+    .clue-table {
+      width: 100%;
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .clue-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .clue-digits {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .clue-digit {
+      flex: 1 1 0;
+      max-width: 36px;
+      min-width: 0;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .clue-feedback {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .feedback-correct {
+      font-weight: 700;
+      color: #00b894;
+    }
+    .feedback-misplaced {
+      font-weight: 700;
+      color: #fdcb6e;
+    }
+    .feedback-sep {
+      margin: 0 4px;
+      opacity: 0.4;
+    }
+
+    /* Answer row */
+    .answer-section {
+      width: 100%;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .answer-label {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
-      opacity: 0.6;
-      margin-bottom: 8px;
+      margin: 0 0 8px;
     }
-    /* Cipher display */
-    .cipher-display {
-      width: 100%;
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 24px 20px;
-      margin-bottom: 20px;
+    .answer-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px 16px;
       justify-content: center;
-      line-height: 1;
+      gap: 8px;
+      width: 100%;
     }
-    .cipher-word {
-      display: inline-flex;
-      gap: 2px;
-    }
-    .cipher-cell {
+    .answer-digit {
+      flex: 1 1 0;
+      max-width: 48px;
+      min-width: 0;
+      height: 56px;
+      border-radius: 12px;
+      background: var(--bg-surface);
+      border: 2px solid transparent;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
       display: flex;
-      flex-direction: column;
       align-items: center;
-      width: 28px;
+      justify-content: center;
       cursor: pointer;
-      user-select: none;
-      border-radius: 4px;
-      transition: background 0.15s;
+      transition: border-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
       &:hover { background: var(--hover-overlay); }
     }
-    .cipher-cell.selected {
-      background: rgba(108, 92, 231, 0.25);
-      box-shadow: 0 0 0 2px var(--accent);
+    .answer-digit.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.25);
     }
-    .cipher-cell.correct .guess-char {
+    .answer-digit.filled {
+      background: rgba(108, 92, 231, 0.1);
+    }
+    .answer-digit.correct {
+      background: rgba(0, 184, 148, 0.18);
       color: #00b894;
-    }
-    .cipher-char {
-      font-size: 0.6rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      opacity: 0.6;
-      line-height: 1;
-      padding-top: 2px;
-    }
-    .guess-char {
-      font-family: 'Poppins', sans-serif;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text);
-      min-height: 1.4em;
-      border-bottom: 2px solid var(--grid-border);
-      width: 100%;
-      text-align: center;
-      line-height: 1.4;
-    }
-    .guess-char.filled {
-      border-bottom-color: var(--accent);
-    }
-    .cipher-punct {
-      font-family: 'Poppins', sans-serif;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text);
-      opacity: 0.5;
-      align-self: flex-end;
-      line-height: 1.4;
-      min-height: 1.4em;
+      border-color: transparent;
     }
 
-    /* Author reveal */
-    .author-reveal {
-      font-family: 'Poppins', sans-serif;
-      font-size: 1rem;
-      font-weight: 600;
-      color: #00b894;
-      text-align: center;
-      margin-bottom: 20px;
-      animation: slideIn 0.3s ease-out;
-    }
-
-    /* Letter picker */
-    .picker-grid {
+    /* Numpad */
+    .numpad {
       display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
       width: 100%;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .picker-btn {
-      aspect-ratio: 1;
-      border-radius: 8px;
+    .numpad-btn {
+      aspect-ratio: 1.4;
+      border-radius: 10px;
       background: var(--bg-surface);
       color: var(--text);
       font-family: 'Poppins', sans-serif;
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s, opacity 0.15s;
+      transition: background 0.15s;
       -webkit-tap-highlight-color: transparent;
       &:hover { background: var(--accent); color: white; }
     }
-    .picker-btn.used {
-      opacity: 0.3;
-    }
     .clear-btn {
-      font-size: 1.1rem;
+      font-size: 1.3rem;
     }
 
-    /* Nav & actions — same as matrix */
+    /* Check button */
+    .check-btn {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    /* Solved */
+    .solved-message {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #00b894;
+      text-align: center;
+      margin-bottom: 16px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    /* Nav & actions */
     .nav-row {
       display: flex;
       align-items: center;
@@ -443,6 +473,7 @@ import { Category } from '../../core/models/category.model';
       &:hover { opacity: 0.9; }
       &:disabled { opacity: 0.4; cursor: default; }
     }
+    .btn.primary { background: var(--accent); color: white; }
     .btn.secondary { background: var(--bg-surface); color: var(--text-muted); }
     .give-up-btn {
       background: none;
@@ -453,47 +484,33 @@ import { Category } from '../../core/models/category.model';
       padding: 8px 0;
       &:hover { opacity: 0.8; text-decoration: underline; }
     }
-    .explanation-panel {
-      width: 100%;
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 20px 24px;
-      margin-bottom: 20px;
-      animation: slideIn 0.3s ease-out;
-    }
-    .section-label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin: 0 0 8px;
-    }
-    .explanation-text {
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: var(--text);
-      opacity: 0.85;
-      margin: 0;
-    }
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @media (max-width: 400px) {
+      .clue-table { padding: 12px; }
+      .clue-row { gap: 8px; }
+      .clue-digit { font-size: 0.95rem; height: 36px; }
+      .clue-feedback { font-size: 0.72rem; }
+      .feedback-sep { margin: 0 2px; }
+      .answer-digit { font-size: 1.2rem; height: 50px; }
+    }
   `
 })
-export class CryptogramComponent implements OnDestroy {
+export class CodebreakerComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cardService = inject(CardService);
   private userState = inject(UserStateService);
   private celebration = inject(CelebrationService);
 
-  readonly alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  readonly numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
   currentIndex = signal(0);
-  guesses = signal<Record<string, string>>({});
-  selectedCipher = signal<string | null>(null);
+  answer = signal<string[]>([]);
+  selectedDigitIndex = signal<number | null>(null);
   solved = signal(false);
-  hintsUsed = signal(0);
   returnIndex = signal<number | null>(null);
 
   showStats = signal(false);
@@ -501,7 +518,7 @@ export class CryptogramComponent implements OnDestroy {
   solvedPuzzles = signal<number[]>([]);
   gaveUpPuzzles = signal<number[]>([]);
   private timerRef: ReturnType<typeof setInterval> | null = null;
-  private allGuessStates: Record<number, Record<string, string>> = {};
+  private allAnswerStates: Record<number, string[]> = {};
   bestTimes: Record<number, number> = {};
 
   private categoryId = toSignal(
@@ -523,19 +540,25 @@ export class CryptogramComponent implements OnDestroy {
       map(params => params.get('id')!),
       switchMap(id => this.cardService.getCardsByCategory(id).pipe(
         switchMap(cards =>
-          from(this.userState.loadCryptogramProgress(id)).pipe(
+          from(this.userState.loadCodebreakerProgress(id)).pipe(
             tap(saved => {
               if (saved) {
                 this.currentIndex.set(Math.min(saved.index, cards.length - 1));
                 this.solvedPuzzles.set(saved.solvedPuzzles ?? []);
                 this.gaveUpPuzzles.set(saved.gaveUpPuzzles ?? []);
-                this.allGuessStates = saved.guessStates ?? {};
+                this.allAnswerStates = saved.answerStates ?? {};
                 this.bestTimes = saved.bestTimes ?? {};
-                const gs = this.allGuessStates[this.currentIndex()] ?? {};
-                this.guesses.set(gs);
+                const savedAnswer = this.allAnswerStates[this.currentIndex()];
+                if (savedAnswer) {
+                  this.answer.set([...savedAnswer]);
+                } else {
+                  this.initAnswer(cards[this.currentIndex()]);
+                }
                 if (this.solvedPuzzles().includes(this.currentIndex())) {
                   this.solved.set(true);
                 }
+              } else {
+                this.initAnswer(cards[this.currentIndex()]);
               }
               this.startTimer();
             }),
@@ -553,7 +576,7 @@ export class CryptogramComponent implements OnDestroy {
     return c.length ? c[i] : null;
   });
 
-  isInstructionCard = computed(() => !this.currentCard()?.cryptogramPlaintext);
+  isInstructionCard = computed(() => !this.currentCard()?.codebreakerAnswer);
 
   formattedTime = computed(() => {
     const s = this.elapsedSeconds();
@@ -570,181 +593,101 @@ export class CryptogramComponent implements OnDestroy {
     return `Best: ${m}:${s.toString().padStart(2, '0')}`;
   });
 
-  isVigenere = computed(() => this.currentCard()?.difficulty === 'Extreme');
-
-  cipherTypeLabel = computed(() => {
-    switch (this.currentCard()?.difficulty) {
-      case 'Easy': return 'Caesar Shift';
-      case 'Medium': return 'Keyword Cipher';
-      case 'Hard': return 'Random Substitution';
-      case 'Extreme': return 'Vigenère Cipher';
-      default: return '';
-    }
-  });
-
-  private cipherMap = computed(() => {
-    const card = this.currentCard();
-    if (!card) return new Map<string, string>();
-    switch (card.difficulty) {
-      case 'Easy': return buildCaesarMap(card.id);
-      case 'Medium': return buildKeywordMap(card.id);
-      default: return buildRandomMap(card.id);
-    }
-  });
-
-  private reverseCipherMap = computed(() => {
-    const m = new Map<string, string>();
-    if (this.isVigenere()) {
-      const card = this.currentCard();
-      if (!card?.cryptogramPlaintext) return m;
-      const text = card.cryptogramPlaintext.toUpperCase();
-      let idx = 0;
-      for (const ch of text) {
-        if (/[A-Z]/.test(ch)) {
-          m.set(String(idx), ch);
-          idx++;
-        }
-      }
-      return m;
-    }
-    for (const [plain, cipher] of this.cipherMap()) {
-      m.set(cipher, plain);
-    }
-    return m;
-  });
-
-  cipherWords = computed(() => {
-    const card = this.currentCard();
-    if (!card?.cryptogramPlaintext) return [];
-    const text = card.cryptogramPlaintext.toUpperCase();
-    const words = text.split(/\s+/);
-
-    if (this.isVigenere()) {
-      const keyword = getVigenereKeyword(card.id);
-      let letterIdx = 0;
-      return words.map(word => {
-        const cells: { cipher: string; isLetter: boolean; key: string }[] = [];
-        for (const ch of word) {
-          if (/[A-Z]/.test(ch)) {
-            const shift = keyword.charCodeAt(letterIdx % keyword.length) - 65;
-            const cipher = String.fromCharCode(((ch.charCodeAt(0) - 65 + shift) % 26) + 65);
-            cells.push({ cipher, isLetter: true, key: String(letterIdx) });
-            letterIdx++;
-          } else {
-            cells.push({ cipher: ch, isLetter: false, key: '' });
-          }
-        }
-        return cells;
-      });
-    }
-
-    const cmap = this.cipherMap();
-    return words.map(word => {
-      const cells: { cipher: string; isLetter: boolean; key: string }[] = [];
-      for (const ch of word) {
-        if (/[A-Z]/.test(ch)) {
-          const cipher = cmap.get(ch) ?? ch;
-          cells.push({ cipher, isLetter: true, key: cipher });
-        } else {
-          cells.push({ cipher: ch, isLetter: false, key: '' });
-        }
-      }
-      return cells;
-    });
-  });
+  startedPuzzles = computed(() =>
+    Object.keys(this.allAnswerStates)
+      .map(Number)
+      .filter(i => {
+        const a = this.allAnswerStates[i];
+        return a && a.some(d => d !== '');
+      })
+  );
 
   ngOnDestroy() {
     this.stopTimer();
     this.persistProgress();
   }
 
-  guessFor(cipherLetter: string): string {
-    return this.guesses()[cipherLetter] ?? '';
+  isGaveUp(): boolean {
+    return this.gaveUpPuzzles().includes(this.currentIndex());
   }
 
-  isLetterUsed(letter: string): boolean {
-    if (this.isVigenere()) return false;
-    return Object.values(this.guesses()).includes(letter);
+  isAnswerComplete(): boolean {
+    return this.answer().every(d => d !== '');
   }
 
-  selectCipher(cipherLetter: string): void {
+  selectDigit(index: number): void {
     if (this.solved()) return;
-    this.selectedCipher.set(
-      this.selectedCipher() === cipherLetter ? null : cipherLetter
+    this.selectedDigitIndex.set(
+      this.selectedDigitIndex() === index ? null : index
     );
   }
 
-  assignLetter(letter: string): void {
-    const sel = this.selectedCipher();
-    if (!sel || this.solved()) return;
+  enterDigit(digit: string): void {
+    const sel = this.selectedDigitIndex();
+    if (sel === null || this.solved()) return;
 
-    this.guesses.update(g => {
-      const updated = { ...g };
-      if (!this.isVigenere()) {
-        // For substitution ciphers, remove this letter if assigned elsewhere
-        for (const [k, v] of Object.entries(updated)) {
-          if (v === letter) delete updated[k];
-        }
-      }
-      updated[sel] = letter;
+    this.answer.update(a => {
+      const updated = [...a];
+      updated[sel] = digit;
       return updated;
     });
 
     this.advanceSelection(sel);
-    this.checkSolved();
     this.persistProgress();
   }
 
-  clearSelected(): void {
-    const sel = this.selectedCipher();
-    if (!sel || this.solved()) return;
+  clearDigit(): void {
+    const sel = this.selectedDigitIndex();
+    if (sel === null || this.solved()) return;
 
-    this.guesses.update(g => {
-      const updated = { ...g };
-      delete updated[sel];
+    this.answer.update(a => {
+      const updated = [...a];
+      updated[sel] = '';
       return updated;
     });
-
     this.persistProgress();
+  }
+
+  checkAnswer(): void {
+    if (!this.isAnswerComplete() || this.solved()) return;
+
+    const card = this.currentCard();
+    if (!card?.codebreakerAnswer) return;
+
+    if (this.answer().join('') === card.codebreakerAnswer) {
+      this.markSolved();
+    }
   }
 
   useHint(): void {
     if (this.solved()) return;
-    const reverse = this.reverseCipherMap();
-    const current = this.guesses();
+    const card = this.currentCard();
+    if (!card?.codebreakerAnswer) return;
 
-    // Find an unguessed or incorrectly guessed key
-    const unresolved = [...reverse.entries()].find(
-      ([key, plain]) => current[key] !== plain
-    );
-    if (!unresolved) return;
+    const answerDigits = card.codebreakerAnswer.split('');
+    const current = this.answer();
 
-    const [key, plain] = unresolved;
-    this.guesses.update(g => {
-      const updated = { ...g };
-      if (!this.isVigenere()) {
-        // For substitution ciphers, remove plain if used elsewhere
-        for (const [k, v] of Object.entries(updated)) {
-          if (v === plain) delete updated[k];
-        }
-      }
-      updated[key] = plain;
+    const unresolved = answerDigits.findIndex((d, i) => current[i] !== d);
+    if (unresolved === -1) return;
+
+    this.answer.update(a => {
+      const updated = [...a];
+      updated[unresolved] = answerDigits[unresolved];
       return updated;
     });
 
-    this.hintsUsed.update(h => h + 1);
-    this.checkSolved();
+    if (this.answer().join('') === card.codebreakerAnswer) {
+      this.markSolved();
+    }
     this.persistProgress();
   }
 
-  revealCryptogram(): void {
-    const reverse = this.reverseCipherMap();
-    const allGuesses: Record<string, string> = {};
-    for (const [cipher, plain] of reverse) {
-      allGuesses[cipher] = plain;
-    }
-    this.guesses.set(allGuesses);
-    this.selectedCipher.set(null);
+  revealAnswer(): void {
+    const card = this.currentCard();
+    if (!card?.codebreakerAnswer) return;
+
+    this.answer.set(card.codebreakerAnswer.split(''));
+    this.selectedDigitIndex.set(null);
     this.solved.set(true);
     this.stopTimer();
 
@@ -756,10 +699,9 @@ export class CryptogramComponent implements OnDestroy {
   }
 
   resetPuzzle(): void {
-    this.guesses.set({});
+    this.initAnswer(this.currentCard());
     this.solved.set(false);
-    this.selectedCipher.set(null);
-    this.hintsUsed.set(0);
+    this.selectedDigitIndex.set(null);
     this.elapsedSeconds.set(0);
 
     const idx = this.currentIndex();
@@ -807,12 +749,6 @@ export class CryptogramComponent implements OnDestroy {
     }
   }
 
-  startedPuzzles = computed(() =>
-    Object.keys(this.allGuessStates)
-      .map(Number)
-      .filter(i => Object.keys(this.allGuessStates[i] ?? {}).length > 0)
-  );
-
   jumpToPuzzle(idx: number): void {
     this.saveCurrent();
     this.currentIndex.set(idx);
@@ -820,49 +756,27 @@ export class CryptogramComponent implements OnDestroy {
     this.showStats.set(false);
   }
 
-  private advanceSelection(current: string): void {
-    const reverse = this.reverseCipherMap();
-    const cipherLetters = this.orderedCipherLetters();
-    const idx = cipherLetters.indexOf(current);
-    if (idx === -1) return;
+  private initAnswer(card: Card | null): void {
+    const len = card?.codebreakerAnswer?.length ?? 3;
+    this.answer.set(Array(len).fill(''));
+  }
 
-    const guesses = this.guesses();
-    for (let i = 1; i < cipherLetters.length; i++) {
-      const next = cipherLetters[(idx + i) % cipherLetters.length];
-      if (!guesses[next] && reverse.has(next)) {
-        this.selectedCipher.set(next);
+  private advanceSelection(current: number): void {
+    const len = this.answer().length;
+    for (let i = 1; i < len; i++) {
+      const next = (current + i) % len;
+      if (this.answer()[next] === '') {
+        this.selectedDigitIndex.set(next);
         return;
       }
     }
-    this.selectedCipher.set(null);
+    this.selectedDigitIndex.set(null);
   }
 
-  private orderedCipherLetters(): string[] {
-    const words = this.cipherWords();
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    for (const word of words) {
-      for (const cell of word) {
-        if (cell.isLetter && !seen.has(cell.key)) {
-          seen.add(cell.key);
-          ordered.push(cell.key);
-        }
-      }
-    }
-    return ordered;
-  }
-
-  private checkSolved(): void {
-    const reverse = this.reverseCipherMap();
-    const current = this.guesses();
-
-    for (const [cipher, plain] of reverse) {
-      if (current[cipher] !== plain) return;
-    }
-
+  private markSolved(): void {
     this.solved.set(true);
     this.stopTimer();
-    this.selectedCipher.set(null);
+    this.selectedDigitIndex.set(null);
     const idx = this.currentIndex();
     const isFirstSolve = !this.solvedPuzzles().includes(idx);
     if (isFirstSolve) {
@@ -886,11 +800,14 @@ export class CryptogramComponent implements OnDestroy {
 
   private loadCurrentPuzzle(): void {
     const idx = this.currentIndex();
-    const gs = this.allGuessStates[idx] ?? {};
-    this.guesses.set(gs);
+    const savedAnswer = this.allAnswerStates[idx];
+    if (savedAnswer) {
+      this.answer.set([...savedAnswer]);
+    } else {
+      this.initAnswer(this.cards()[idx]);
+    }
     this.solved.set(this.solvedPuzzles().includes(idx) || this.gaveUpPuzzles().includes(idx));
-    this.selectedCipher.set(null);
-    this.hintsUsed.set(0);
+    this.selectedDigitIndex.set(null);
     this.elapsedSeconds.set(0);
     if (this.isInstructionCard()) this.stopTimer();
     else if (!this.solved()) this.startTimer();
@@ -916,98 +833,13 @@ export class CryptogramComponent implements OnDestroy {
   private persistProgress(): void {
     const catId = this.categoryId();
     if (!catId) return;
-    this.allGuessStates[this.currentIndex()] = this.guesses();
-    this.userState.saveCryptogramProgress(catId, {
+    this.allAnswerStates[this.currentIndex()] = this.answer();
+    this.userState.saveCodebreakerProgress(catId, {
       index: this.currentIndex(),
-      guessStates: this.allGuessStates,
+      answerStates: this.allAnswerStates,
       solvedPuzzles: this.solvedPuzzles(),
       gaveUpPuzzles: this.gaveUpPuzzles(),
       bestTimes: this.bestTimes,
     });
   }
-}
-
-// ── Cipher Generation ───────────────────────────────────────────
-
-function seededRandom(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) | 0;
-    return ((s >>> 0) / 0x100000000);
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-}
-
-// Easy: every letter shifts by the same amount
-function buildCaesarMap(cardId: string): Map<string, string> {
-  const rand = seededRandom(hashString(cardId));
-  const shift = 3 + Math.floor(rand() * 20);
-  const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const m = new Map<string, string>();
-  for (let i = 0; i < 26; i++) {
-    m.set(alpha[i], alpha[(i + shift) % 26]);
-  }
-  return m;
-}
-
-// Medium: keyword determines the cipher alphabet
-function buildKeywordMap(cardId: string): Map<string, string> {
-  const keywords = ['PHILOSOPHY', 'KNOWLEDGE', 'THINKING', 'DISCOVERY', 'SOCRATES'];
-  const rand = seededRandom(hashString(cardId));
-  const keyword = keywords[Math.floor(rand() * keywords.length)];
-  const seen = new Set<string>();
-  const cipher: string[] = [];
-  for (const ch of keyword) {
-    if (!seen.has(ch)) { seen.add(ch); cipher.push(ch); }
-  }
-  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
-    if (!seen.has(ch)) cipher.push(ch);
-  }
-  const m = new Map<string, string>();
-  const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  for (let i = 0; i < 26; i++) {
-    m.set(alpha[i], cipher[i]);
-  }
-  return m;
-}
-
-// Hard: random derangement (no letter maps to itself)
-function buildRandomMap(cardId: string): Map<string, string> {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-  const rand = seededRandom(hashString(cardId));
-  let shuffled: string[];
-  let attempts = 0;
-  do {
-    shuffled = [...letters];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    attempts++;
-  } while (letters.some((ch, i) => ch === shuffled[i]) && attempts < 100);
-  for (let i = 0; i < letters.length; i++) {
-    if (shuffled[i] === letters[i]) {
-      const swap = (i + 1) % letters.length;
-      [shuffled[i], shuffled[swap]] = [shuffled[swap], shuffled[i]];
-    }
-  }
-  const m = new Map<string, string>();
-  for (let i = 0; i < letters.length; i++) {
-    m.set(letters[i], shuffled[i]);
-  }
-  return m;
-}
-
-// Extreme: Vigenere keyword (each position uses a different shift)
-function getVigenereKeyword(cardId: string): string {
-  const keywords = ['THINK', 'REASON', 'WISDOM', 'TRUTH', 'CIPHER'];
-  const rand = seededRandom(hashString(cardId));
-  return keywords[Math.floor(rand() * keywords.length)];
 }

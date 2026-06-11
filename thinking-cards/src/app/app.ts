@@ -10,7 +10,7 @@ import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
 import { routeAnimation } from './shared/animations/route-animations';
 
-const HIDDEN_BAR_PATTERNS = ['/landing', '/login', '/register', '/admin', '/category/', '/matrix/', '/cryptogram/', '/nonogram/'];
+const HIDDEN_BAR_PATTERNS = ['/landing', '/login', '/register', '/admin', '/category/', '/matrix/', '/cryptogram/', '/nonogram/', '/codebreaker/', '/quiz/'];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
